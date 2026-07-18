@@ -1,0 +1,19 @@
+{
+  "name": "world-stars-cup",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-based 3D arcade football vertical slice with photo-to-avatar onboarding. Original fictional branding.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "three": "^0.166.1"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "fifagame-market",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Prediction market for the Argentina vs Spain match",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
