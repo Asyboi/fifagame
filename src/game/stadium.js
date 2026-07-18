@@ -98,8 +98,8 @@ function buildGoal() {
   back.rotation.y = Math.PI / 2;
   back.position.set(-GD, GH / 2, 0);
   goal.add(back);
-  const roof = new THREE.Mesh(new THREE.PlaneGeometry(GW, GD), netMat);
-  roof.rotation.set(0, Math.PI / 2, Math.PI / 2);
+  const roof = new THREE.Mesh(new THREE.PlaneGeometry(GD, GW), netMat);
+  roof.rotation.x = -Math.PI / 2;
   roof.position.set(-GD / 2, GH, 0);
   goal.add(roof);
   for (const s of [-1, 1]) {
@@ -201,14 +201,13 @@ export function buildStadium() {
   pitch.receiveShadow = true;
   group.add(pitch);
 
-  // goals
-  const goalR = buildGoal(); // faces -x build; place at +x rotated
+  // goals (built with the mouth facing local +x and net behind at local -x)
+  const goalR = buildGoal();
   goalR.position.set(L / 2, 0, 0);
-  goalR.rotation.y = Math.PI / 2;
+  goalR.rotation.y = Math.PI; // mouth faces the pitch (-x)
   group.add(goalR);
   const goalL = buildGoal();
-  goalL.position.set(-L / 2, 0, 0);
-  goalL.rotation.y = -Math.PI / 2;
+  goalL.position.set(-L / 2, 0, 0); // mouth faces the pitch (+x) as built
   group.add(goalL);
 
   // stands (simple raked blocks under the crowd)
