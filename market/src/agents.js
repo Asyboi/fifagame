@@ -64,8 +64,11 @@ const DECISION_SCHEMA = {
       description: 'Team to buy, or PASS to sit this one out.',
     },
     size: {
+      // Capped at 15, not 25. An agent gets roughly eighteen decisions in a
+      // match on $100; at $25 a head they were broke by the half hour and spent
+      // the rest of the game narrating their own bankruptcy.
       type: 'integer',
-      enum: [0, 5, 10, 25],
+      enum: [0, 5, 10, 15],
       description: 'Dollars to bet. Use 0 when passing.',
     },
     reason: {
@@ -236,9 +239,16 @@ function buildPrompt(market, trader) {
     '',
     `You have $${trader.cash.toFixed(2)} cash, ${trader.yes.toFixed(0)} Argentina shares, `
       + `${trader.no.toFixed(0)} Spain shares.`,
+    // Agents get roughly one decision every ten seconds for the whole match and
+    // cannot be topped up, so pacing has to be stated outright.
+    'This is your entire stack for the match — there is no more money coming. '
+      + 'You get a decision roughly every ten seconds until full time, so keep '
+      + 'enough back to react to a late goal.',
     '',
     'Make one trading decision now, in character. PASS is a legitimate choice when '
       + 'nothing has changed. Your reason is shown live on a big screen to an audience '
-      + 'watching the match, so make it vivid and specific to what just happened.',
+      + 'watching the match, so make it vivid and specific to what just happened. '
+      + 'Talk about the football, not your bankroll — never mention being broke, out '
+      + 'of cash, or unable to bet. If you cannot trade, give your read on the match.',
   ].join('\n');
 }
