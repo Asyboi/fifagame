@@ -79,7 +79,8 @@ test('the prompt carries the state an agent needs to be specific', () => {
   applyEvent(market, { type: 'goal', team: 'ESP', minute: 12 });
 
   const prompt = buildPrompt(market, market.ledger.traders.get(persona.id));
-  assert.match(prompt, /0-1/, 'score missing');
+  assert.match(prompt, /Argentina 0 - 1 Spain/, 'score missing or not team-labelled');
+  assert.match(prompt, /Spain lead by 1/, 'who is ahead must be stated outright');
   assert.match(prompt, /trades at \d+c/, 'market price missing');
   assert.match(prompt, /fair value: \d+c/, 'model fair value missing');
   assert.match(prompt, /GOAL ESP/, 'recent goal missing');
