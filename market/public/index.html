@@ -58,6 +58,12 @@
   @keyframes blink { 50% { opacity: 0.35; } }
   .pill.resolved { color: var(--dim); }
   .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .ghost-btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--dim);
+    border-radius: 999px; width: 32px; height: 32px; cursor: pointer; font-size: 16px;
+    display: grid; place-items: center; line-height: 1;
+  }
+  .ghost-btn:hover { color: var(--text); border-color: #c9cec7; }
   .trader-chip {
     display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     background: var(--card); border-radius: 999px; padding: 5px 12px 5px 6px; font-weight: 700;
@@ -232,6 +238,7 @@
     <span class="pill" id="status-pill"><span class="dot"></span><span id="status">connecting</span></span>
     <div class="nav-right">
       <span class="tiny dim" id="conn"></span>
+      <button class="ghost-btn" id="reset-btn" title="Reset match (presenter)">↻</button>
       <div class="trader-chip">
         <span class="avatar" id="avatar">?</span>
         <span id="myname">guest</span>
@@ -363,6 +370,17 @@
     <p>$100 of paper money. Top the leaderboard by full time.</p>
     <input id="name-input" maxlength="16" placeholder="Leaderboard name" autocomplete="off">
     <button class="buy yes" id="join-btn">Start trading</button>
+  </div>
+</div>
+
+<!-- Presenter reset: guarded by RESET_TOKEN, so audience taps are harmless -->
+<div class="modal-veil" id="resetmodal">
+  <div class="modal">
+    <h2>Reset the match?</h2>
+    <p>Fresh market, everyone back to $100. The audience keeps their seats.</p>
+    <input id="reset-token" type="password" placeholder="RESET_TOKEN (empty if none set)" autocomplete="off">
+    <button class="buy yes" id="reset-go">Reset match</button>
+    <button class="buy" id="reset-cancel" style="background:#e4e7e2;color:var(--dim);margin-top:8px">Cancel</button>
   </div>
 </div>
 
@@ -563,6 +581,40 @@ $('buy').onclick = async () => {
 };
 
 // ------------------------------------------------------------------ transport
+
+// Presenter reset (↻ in the nav). Token-guarded server-side; remembered only
+// for this tab so the presenter isn't retyping it all demo day.
+$('reset-btn').onclick = () => {
+  $('reset-token').value = sessionStorage.getItem('mktResetToken') || '';
+  $('resetmodal').classList.add('show');
+  $('reset-token').focus();
+};
+$('reset-cancel').onclick = () => $('resetmodal').classList.remove('show');
+$('resetmodal').onclick = (e) => { if (e.target === $('resetmodal')) $('resetmodal').classList.remove('show'); };
+
+async function doReset() {
+  const token = $('reset-token').value;
+  const go = $('reset-go');
+  go.disabled = true;
+  try {
+    const r = await fetch('/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (r.status === 403) { toast('Bad token — check RESET_TOKEN'); return; }
+    if (!r.ok) throw new Error();
+    sessionStorage.setItem('mktResetToken', token);
+    $('resetmodal').classList.remove('show');
+    toast('Match reset — fresh market');
+  } catch {
+    toast('Reset failed — try again');
+  } finally {
+    go.disabled = false;
+  }
+}
+$('reset-go').onclick = doReset;
+$('reset-token').onkeydown = (e) => { if (e.key === 'Enter') doReset(); };
 
 async function refreshMe() {
   try {
