@@ -93,6 +93,11 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/join') return await postJoin(req, res);
     if (req.method === 'POST' && url.pathname === '/bet') return await postBet(req, res);
     if (req.method === 'GET' && url.pathname === '/state') return json(res, 200, snapshot(market));
+    if (req.method === 'GET' && url.pathname === '/me') {
+      // Clients track their own position between bets, but settlement rewrites
+      // cash server-side, so they need a way to re-sync at the whistle.
+      return json(res, 200, { me: traderView(market, url.searchParams.get('traderId')) });
+    }
     if (req.method === 'GET') return await serveStatic(url, res);
     return json(res, 404, { error: 'not found' });
   } catch (err) {

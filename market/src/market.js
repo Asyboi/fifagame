@@ -19,6 +19,9 @@ import { fairValue, finalOutcome } from './fairValue.js';
 const FEED_LIMIT = 40;
 const HISTORY_LIMIT = 600;
 
+// Minimum bot trade size that earns a line in the feed.
+const BOT_FEED_MIN = 6;
+
 export function createMatchMarket({ b = 120 } = {}) {
   return {
     book: createBook(b),
@@ -71,15 +74,20 @@ export function placeBet(market, { traderId, team, budget }) {
   applyFill(trader, fill);
   market.seq += 1;
 
-  pushFeed(market, {
-    type: 'trade',
-    trader: trader.name,
-    kind: trader.kind,
-    team,
-    spent: fill.spent,
-    shares: fill.shares,
-    price: fill.avgPrice,
-  });
+  // Bots trade several times a second, which would bury goals, audience bets and
+  // agent commentary under a wall of $1 fills. Humans and agents always make the
+  // feed; bots only when the trade is big enough to be worth a line on screen.
+  if (trader.kind !== 'bot' || fill.spent >= BOT_FEED_MIN) {
+    pushFeed(market, {
+      type: 'trade',
+      trader: trader.name,
+      kind: trader.kind,
+      team,
+      spent: fill.spent,
+      shares: fill.shares,
+      price: fill.avgPrice,
+    });
+  }
   recordPrice(market);
 
   return fill;
