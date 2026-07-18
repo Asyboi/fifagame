@@ -6,6 +6,9 @@ import { MatchAudio } from './game/audio.js';
 import { Onboarding } from './ui/onboarding.js';
 import { Hud } from './ui/hud.js';
 import { Screens } from './ui/screens.js';
+import { MarketHub } from './market/market.js';
+import { MarketPanel } from './ui/marketPanel.js';
+import { MATCH } from './config.js';
 
 const canvas = document.getElementById('game-canvas');
 const uiRoot = document.getElementById('ui-root');
@@ -21,6 +24,13 @@ const input = new Input();
 const audio = new MatchAudio();
 const hud = new Hud(uiRoot);
 const screens = new Screens(uiRoot);
+const marketHub = new MarketHub();
+const marketPanel = new MarketPanel(uiRoot, marketHub);
+
+function setMarketVisible(visible) {
+  marketPanel.chip.style.display = visible ? 'flex' : 'none';
+  if (!visible) marketPanel.toggle(false);
+}
 
 let scene = null;
 let match = null;
@@ -36,6 +46,8 @@ resize();
 
 function startOnboarding() {
   hud.hide();
+  marketHub.voidOpenMarkets('Match abandoned');
+  setMarketVisible(false);
   disposeMatch();
   new Onboarding(uiRoot, (config) => {
     matchConfig = config;
@@ -64,7 +76,11 @@ function startMatch() {
     difficulty: matchConfig.difficulty,
     audio,
     events: {
-      onGoal: (side, scorer, m) => screens.goalBanner(scorer, side, m),
+      onGoal: (side, scorer, m) => {
+        screens.goalBanner(scorer, side, m);
+        marketHub.onGoal(side, !!scorer?.isUser);
+        marketHub.onTotalGoals(m.score.home + m.score.away);
+      },
       onScore: (score) => hud.setScore(score),
       onClock: (text, half) => hud.setClock(text, half),
       onCommentary: (text) => hud.toast(text),
@@ -72,6 +88,7 @@ function startMatch() {
         if (state === 'halftime') screens.halftime(match, () => match.resumeSecondHalf());
         if (state === 'fulltime') {
           hud.hide();
+          marketHub.onFullTime(match.score);
           screens.results(match, startMatch, startOnboarding);
         }
       },
@@ -81,6 +98,17 @@ function startMatch() {
   hud.setScore(match.score);
   hud.setClock('00:00', 1);
 
+  marketHub.startMatch({
+    homeName: match.homeTeam.name,
+    homeShort: match.homeTeam.short,
+    awayName: match.awayTeam.name,
+    awayShort: match.awayTeam.short,
+    userName: matchConfig.profile.name,
+    userRole: matchConfig.profile.position,
+    difficulty: matchConfig.difficulty,
+  });
+  setMarketVisible(true);
+
   screens.lineup(match, () => {
     hud.show();
     match.beginMatch();
@@ -88,8 +116,25 @@ function startMatch() {
   });
 }
 
-// ── main loop ─────────────────────────────────────────────────
+// ── main loop ───────────────────────────────────────────────────
 const clock = new THREE.Clock();
+let marketTickAcc = 0;
+
+function tickMarket(dt) {
+  if (!match || match.state !== 'play') return;
+  marketTickAcc += dt;
+  if (marketTickAcc < 1) return;
+  marketTickAcc = 0;
+  const tFrac =
+    ((match.half - 1) + Math.min(match.elapsed / MATCH.halfLengthSeconds, 1)) / 2;
+  marketHub.tick({
+    scoreHome: match.score.home,
+    scoreAway: match.score.away,
+    tFrac,
+    ballTilt: (match.ball.pos.x * match.homeTeam.attackDir) / 52.5,
+    possession: match._possessionSide(),
+  });
+}
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 1 / 20);
@@ -112,6 +157,7 @@ function frame() {
       }
     }
     match.update(dt, snap);
+    tickMarket(dt);
     hud.setPower(snap.shootCharge);
     hud.setPadConnected(input.gamepadConnected);
     if (match.state === 'play' || match.state === 'kickoff') hud.drawRadar(match);
@@ -125,4 +171,5 @@ startOnboarding();
 // Debug/testing hook (used by the automated smoke test).
 window.__fable = {
   get match() { return match; },
+  get market() { return marketHub; },
 };

@@ -91,6 +91,32 @@ const run = async () => {
   }));
   console.log('   state:', JSON.stringify(state));
 
+  console.log('4b. prediction market: open panel, place bet, verify wallet');
+  await page.click('.fm-chip');
+  await page.waitForFunction(
+    () => !document.querySelector('.fm-panel').classList.contains('fm-closed'),
+    { timeout: 5000 }
+  );
+  const balBefore = await page.evaluate(() => window.__fable.market.balance);
+  await page.click('.fm-card[data-id="winner"] .fm-row[data-outcome="home"] .fm-yes');
+  await page.waitForSelector('.fm-slip .fm-place', { timeout: 5000 });
+  await page.$eval('.fm-slip .fm-amount', (el) => { el.value = '50'; });
+  await page.click('.fm-slip .fm-place');
+  await new Promise((r) => setTimeout(r, 400));
+  const marketCheck = await page.evaluate(() => ({
+    balance: window.__fable.market.balance,
+    positions: window.__fable.market.positions.length,
+    open: window.__fable.market.positions.filter((p) => p.status === 'open').length,
+    priced: window.__fable.market.markets.every((m) =>
+      m.outcomes.every((o) => o.price > 0 && o.price < 1)),
+  }));
+  console.log('   market:', JSON.stringify(marketCheck));
+  if (marketCheck.balance !== balBefore - 50) fail('bet did not debit wallet');
+  if (marketCheck.open !== 1) fail('position not opened');
+  if (!marketCheck.priced) fail('markets not priced');
+  await page.screenshot({ path: 'tests/shot-market.png' });
+  await page.click('#fm-close');
+
   console.log('5. pause / resume');
   await page.keyboard.press('Escape');
   await new Promise((r) => setTimeout(r, 300));
@@ -121,6 +147,10 @@ const run = async () => {
     () => window.__fable.match.state === 'fulltime',
     { timeout: 15000 }
   );
+  const settled = await page.evaluate(() =>
+    window.__fable.market.positions.every((p) => p.status !== 'open') &&
+    window.__fable.market.markets.every((m) => m.status !== 'open'));
+  if (!settled) fail('market positions did not settle at fulltime');
   await page.waitForSelector('#r-rematch', { timeout: 5000 });
   await page.click('#r-rematch');
   await page.waitForSelector('#kickoff-btn', { timeout: 10000 });

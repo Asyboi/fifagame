@@ -155,3 +155,125 @@ input[type="text"], input[type="number"], select {
   position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
   font-size: 11px; opacity: 0.45; white-space: nowrap;
 }
+
+/* ── FABLE MARKET (prediction market corner panel) ───────────── */
+.fm-chip {
+  position: absolute; top: 52px; right: 18px;
+  display: flex; align-items: center; gap: 8px;
+  background: #1b2c47; color: #dfe7f3; border: 1px solid #2f4a75;
+  border-radius: 20px; padding: 7px 14px; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; cursor: pointer; z-index: 40;
+  transition: background 0.15s, transform 0.12s;
+}
+.fm-chip:hover { background: #234066; transform: translateY(-1px); }
+.fm-chip b { color: #ffd60a; }
+.fm-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #27c07d;
+  animation: fm-pulse 1.6s infinite;
+}
+@keyframes fm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.fm-panel {
+  position: absolute; top: 0; right: 0; height: 100%; width: 390px;
+  background: #101c30; border-left: 1px solid #24395c;
+  display: flex; flex-direction: column; z-index: 50;
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
+}
+.fm-panel.fm-closed { transform: translateX(105%); }
+
+.fm-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid #24395c;
+}
+.fm-logo { font-size: 15px; font-weight: 400; letter-spacing: 1px; color: #8fa8c9; }
+.fm-logo b { color: #ffd60a; font-weight: 900; }
+.fm-balance { margin-left: auto; font-size: 12px; color: #8fa8c9; }
+.fm-balance b { color: #ffd60a; font-size: 14px; }
+.fm-close {
+  background: none; border: none; color: #8fa8c9; font-size: 24px;
+  cursor: pointer; line-height: 1;
+}
+.fm-scroll { overflow-y: auto; padding: 12px 14px; flex: 1; }
+
+.fm-faucet {
+  width: 100%; margin-bottom: 10px; padding: 10px;
+  background: #27c07d; color: #06281a; font-weight: 800; border: none;
+  border-radius: 8px; cursor: pointer;
+}
+
+.fm-card {
+  background: #16253d; border: 1px solid #24395c; border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.fm-card.fm-done { opacity: 0.6; }
+.fm-q { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #dfe7f3; }
+.fm-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.fm-badge-open { background: #10391f; color: #27c07d; }
+.fm-badge-resolved { background: #3a2a10; color: #ffd60a; }
+.fm-badge-void { background: #3a1a1a; color: #e35d6a; }
+
+.fm-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.fm-oname { flex: 1; font-size: 12px; color: #b9c8dd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-spark { opacity: 0.9; }
+.fm-delta { width: 30px; font-size: 10px; text-align: right; }
+.fm-delta.up, .up { color: #27c07d; font-style: normal; }
+.fm-delta.down, .down { color: #e35d6a; font-style: normal; }
+
+.fm-yes, .fm-no {
+  border: none; border-radius: 6px; font-size: 11px; font-weight: 800;
+  padding: 6px 8px; cursor: pointer; min-width: 62px;
+}
+.fm-yes { background: #12432a; color: #3ee897; }
+.fm-yes:hover:not(:disabled) { background: #17593a; }
+.fm-no { background: #47202a; color: #ff8291; }
+.fm-no:hover:not(:disabled) { background: #5d2836; }
+.fm-yes:disabled, .fm-no:disabled { opacity: 0.4; cursor: default; }
+
+.fm-slip {
+  margin-top: 8px; background: #0e1930; border: 1px solid #2f4a75;
+  border-radius: 8px; padding: 10px;
+}
+.fm-slip-title { font-size: 12px; font-weight: 800; margin-bottom: 8px; color: #ffd60a; }
+.fm-slip-amounts { display: flex; gap: 6px; align-items: center; }
+.fm-amount {
+  width: 80px; background: #14283e; color: #eef2f7;
+  border: 1px solid #2f4a75; border-radius: 6px; padding: 6px 8px;
+}
+.fm-quick {
+  background: #1b2c47; color: #b9c8dd; border: 1px solid #2f4a75;
+  border-radius: 6px; padding: 6px 8px; font-size: 11px; cursor: pointer;
+}
+.fm-slip-math { font-size: 11px; color: #8fa8c9; margin: 8px 0; }
+.fm-slip-actions { display: flex; gap: 8px; }
+.fm-place {
+  flex: 1; border: none; border-radius: 6px; font-weight: 800;
+  padding: 8px; cursor: pointer; letter-spacing: 1px;
+}
+.fm-place.buy-yes { background: #27c07d; color: #06281a; }
+.fm-place.buy-no { background: #e35d6a; color: #2b070c; }
+.fm-cancel {
+  background: none; border: 1px solid #2f4a75; color: #8fa8c9;
+  border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 11px;
+}
+.fm-slip-err { color: #ff8291; font-size: 11px; margin-top: 6px; }
+
+.fm-h3 { font-size: 11px; letter-spacing: 2px; color: #8fa8c9; margin: 14px 0 8px; }
+.fm-positions .fm-pos {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #16253d; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+  font-size: 11px;
+}
+.fm-pos-label { flex: 1 1 100%; color: #dfe7f3; font-weight: 700; }
+.fm-pos-num { color: #8fa8c9; }
+.fm-pos-state { margin-left: auto; font-size: 9px; letter-spacing: 1px; color: #8fa8c9; }
+.fm-pos-won .fm-pos-state { color: #27c07d; }
+.fm-pos-lost .fm-pos-state { color: #e35d6a; }
+.fm-pos-lost, .fm-pos-cashed, .fm-pos-void { opacity: 0.55; }
+.fm-cashout {
+  background: #ffd60a; color: #1c1600; font-weight: 800; font-size: 10px;
+  border: none; border-radius: 5px; padding: 5px 8px; cursor: pointer;
+}
+.fm-act { font-size: 11px; color: #8fa8c9; padding: 3px 0; border-bottom: 1px dashed #1e3252; }
+.fm-empty { font-size: 11px; color: #55688a; }
+.fm-fine { font-size: 9px; color: #55688a; margin: 14px 0 20px; }
