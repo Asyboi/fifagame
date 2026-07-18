@@ -2,11 +2,13 @@
 // market feed. One Match = one game; dispose() on exit.
 
 import * as THREE from 'three';
-import { PITCH, BALL, PLAYER, DIFFICULTY, POSITIONS, SKIN_TONES, HAIR_COLORS, HAIR_STYLES } from '../config.js';
+import { PITCH, BALL, PLAYER, METEOR, DIFFICULTY, POSITIONS, SKIN_TONES, HAIR_COLORS, HAIR_STYLES } from '../config.js';
 import { clamp, damp, lerp, rand, angleLerp, randPick } from '../utils.js';
 import { createBall, stepBall, kickBall, giveBall, ballSpeed, ballSpeedXZ, predictCrossing } from './ball.js';
-import { crossedGoalLine, outOfBounds, classifyRestart, restartSpot, createReferee, tickClock, awardGoal } from './referee.js';
+import { crossedGoalLine, outOfBounds, classifyRestart, restartSpot, createReferee, tickClock, awardGoal, decideWinner } from './referee.js';
 import { pickPassTarget, pickSwitchTarget, formationAnchor, inShootingRange, shootAim, shotVelocity, aiShouldShoot } from './aicore.js';
+import { createStorm, updateStorm, resolveImpact } from './meteors.js';
+import { createMeteorFx } from './meteorfx.js';
 import { buildPlayer, animateRig, disposeRig } from './rig.js';
 import { buildStadium, buildBallMesh, spinBall } from './stadium.js';
 import { createMarketFeed } from '../market.js';
@@ -53,6 +55,9 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   const ballMesh = buildBallMesh();
   scene.add(ballMesh);
 
+  const storm = createStorm();
+  const meteorFx = createMeteorFx(scene);
+
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.55, 0.72, 28),
     new THREE.MeshBasicMaterial({ color: '#22d3ee', transparent: true, opacity: 0.9, side: THREE.DoubleSide }),
@@ -79,6 +84,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
         attackDir: side === 'home' ? 1 : -1,
         stamina: PLAYER.STAMINA_MAX,
         user: isUserSlot, controlled: false,
+        alive: true, deadT: 0,
         name: isUserSlot ? profile.name : pool[i + (side === 'away' ? 5 : 0) % pool.length],
         number: isUserSlot ? profile.number : defaultNumber(slot.role, i),
         kickT: 0, kickCd: 0, stumbleT: 0, downT: 0, slideT: 0,
@@ -106,7 +112,9 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   const homePlayers = players.filter((p) => p.side === 'home');
   const awayPlayers = players.filter((p) => p.side === 'away');
   const userPlayer = players.find((p) => p.user);
-  const gkOf = (side) => players.find((p) => p.side === side && p.role === 'GK');
+  const gkOf = (side) => players.find((p) => p.side === side && p.role === 'GK' && p.alive);
+  const aliveOf = (side) => (side === 'home' ? homePlayers : awayPlayers).filter((p) => p.alive);
+  const aliveCount = (side) => (side === 'home' ? homePlayers : awayPlayers).reduce((n, p) => n + (p.alive ? 1 : 0), 0);
 
   // ---------- state ----------
   const ball = createBall();
@@ -127,6 +135,8 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   let countShown = 4;
   let exitSent = false;
   let excitement = 0;
+  let camShake = 0;
+  let finalResult = null;
   const camPos = new THREE.Vector3(0, 42, 60);
   const camLook = new THREE.Vector3(0, 0, 0);
   const prevBall = { x: 0, y: BALL.R, z: 0 };
@@ -134,6 +144,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
 
   hud.setTeams(homeTeam.code, awayTeam.code, homeTeam.kit.primary, awayTeam.kit.primary);
   hud.setScore(0, 0);
+  hud.setAlive(aliveCount('home'), aliveCount('away'));
   resetKickoff('home');
 
   // ---------- helpers ----------
@@ -147,14 +158,66 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   }
 
   function switchPlayer() {
-    if (switchCd > 0) return;
+    if (switchCd > 0 || !controlled) return;
     switchCd = PLAYER.SWITCH_COOLDOWN;
-    const pick = pickSwitchTarget(homePlayers, ball.pos, controlled.id);
+    const pick = pickSwitchTarget(aliveOf('home'), ball.pos, controlled.id);
     if (pick) setControlled(pick);
   }
 
-  function matesOf(p) { return p.side === 'home' ? homePlayers : awayPlayers; }
-  function oppsOf(p) { return p.side === 'home' ? awayPlayers : homePlayers; }
+  function matesOf(p) { return (p.side === 'home' ? homePlayers : awayPlayers).filter((q) => q.alive); }
+  function oppsOf(p) { return (p.side === 'home' ? awayPlayers : homePlayers).filter((q) => q.alive); }
+
+  // ---------- meteors ----------
+  function killPlayer(p) {
+    if (!p.alive) return;
+    p.alive = false;
+    p.deadT = 1.6; // body lies on the pitch briefly, then disappears
+    p.vel.x = 0; p.vel.z = 0;
+    if (ball.owner === p) kickBall(ball, rand(-3, 3), 5, rand(-3, 3), p.side, p.id);
+    hud.toast(`☄ ${p.name} was crushed by a meteor!`, 1800);
+    if (controlled === p) {
+      const next = pickSwitchTarget(aliveOf('home'), ball.pos, p.id);
+      if (next) setControlled(next);
+    }
+  }
+
+  function applyImpact(m) {
+    meteorFx.impact(m);
+    audio.boom();
+    camShake = Math.min(1.4, camShake + 0.9);
+    const { killed, downed } = resolveImpact(m.x, m.z, players);
+    for (const p of downed) p.downT = Math.max(p.downT, 1.1);
+    for (const p of killed) killPlayer(p);
+    // blast a loose ball out of the crater
+    if (!ball.owner) {
+      const dx = ball.pos.x - m.x; const dz = ball.pos.z - m.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 1e-3 && d < METEOR.DOWN_RADIUS + 1) {
+        const sp = METEOR.BALL_BLAST / Math.max(1, d);
+        kickBall(ball, (dx / d) * sp, 6, (dz / d) * sp, ball.lastTouch || 'home');
+      }
+    }
+    hud.setAlive(aliveCount('home'), aliveCount('away'));
+    if (phase === 'play' && (aliveCount('home') === 0 || aliveCount('away') === 0)) endMatch('annihilation');
+  }
+
+  function meteorStep(dt) {
+    // half the strikes land near a random player; the rest hit open pitch
+    const targetPos = () => {
+      if (Math.random() > METEOR.TARGET_PLAYER_CHANCE) return null;
+      const alive = players.filter((p) => p.alive);
+      if (!alive.length) return null;
+      const p = alive[(Math.random() * alive.length) | 0];
+      return { x: p.pos.x, z: p.pos.z };
+    };
+    const ev = updateStorm(storm, elapsed, dt, targetPos);
+    if (ev.started) {
+      hud.toast('☄ METEOR STORM ☄', 3000);
+      audio.groan();
+    }
+    for (const m of ev.spawned) { meteorFx.spawn(m); audio.whoosh(); }
+    for (const m of ev.impacted) applyImpact(m);
+  }
 
   function executePass(p, dx, dz, error = 0) {
     const pick = pickPassTarget(matesOf(p), oppsOf(p), p, dx, dz);
@@ -183,7 +246,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
 
   function executeShoot(p, charge, biasZ) {
     const gk = gkOf(p.side === 'home' ? 'away' : 'home');
-    const aim = shootAim(p.attackDir, biasZ, charge, gk.pos.z);
+    const aim = shootAim(p.attackDir, biasZ, charge, gk ? gk.pos.z : 0);
     const dist = Math.hypot(aim.x - ball.pos.x, aim.z - ball.pos.z);
     const speed = clamp(PLAYER.SHOOT_MIN + charge * (PLAYER.SHOOT_MAX - PLAYER.SHOOT_MIN) + dist * 0.12, PLAYER.SHOOT_MIN, 32);
     const v = shotVelocity(ball.pos, aim, speed, BALL.GRAVITY);
@@ -229,6 +292,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   // ---------- referee flow ----------
   function resetKickoff(kickSide) {
     for (const p of players) {
+      if (!p.alive) continue; // the dead stay dead
       p.pos.x = p.base.x; p.pos.z = p.base.z;
       p.vel.x = 0; p.vel.z = 0;
       p.stumbleT = p.downT = p.slideT = p.diveT = 0;
@@ -236,11 +300,15 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     }
     ball.pos.x = 0; ball.pos.z = 0; ball.pos.y = BALL.R;
     ball.vel.x = 0; ball.vel.y = 0; ball.vel.z = 0;
-    const kicker = players.find((p) => p.side === kickSide && p.role === 'FWD');
+    const kicker = players.find((p) => p.side === kickSide && p.role === 'FWD' && p.alive)
+      || players.find((p) => p.side === kickSide && p.alive);
+    if (!kicker) return; // side wiped out — annihilation already ended the match
     giveBall(ball, kicker, kickSide);
     lastKicker = null;
-    if (kickSide === 'home') setControlled(kicker.user ? kicker : userPlayer);
-    else setControlled(userPlayer);
+    const homePick = (userPlayer.alive ? userPlayer : null) || aliveOf('home')[0];
+    if (!homePick) return;
+    if (kickSide === 'home') setControlled(kicker.user ? kicker : homePick);
+    else setControlled(homePick);
   }
 
   function onGoal(scoringSide) {
@@ -271,13 +339,18 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     ball.vel.x = 0; ball.vel.y = 0; ball.vel.z = 0;
     ball.owner = null;
     // nearest available player of the restarting side goes to the ball
-    const mates = r.forSide === 'home' ? homePlayers : awayPlayers;
+    const mates = aliveOf(r.forSide);
     let best = null; let bd = Infinity;
     for (const p of mates) {
       if (r.type !== 'goalkick' && p.role === 'GK') continue;
       if (r.type === 'goalkick' && p.role !== 'GK') continue;
       const d = (p.pos.x - spot.x) ** 2 + (p.pos.z - spot.z) ** 2;
       if (d < bd) { bd = d; best = p; }
+    }
+    if (!best) { // nobody left to take it — play on with a loose ball
+      restartInfo = null;
+      phase = 'play';
+      return;
     }
     restartGiver = best;
     const inset = r.type === 'throwin' ? Math.sign(spot.z) * 0.9 : 0;
@@ -291,6 +364,13 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
   function finishRestart() {
     const r = restartInfo;
     if (!r) { phase = 'play'; return; }
+    if (!restartGiver || !restartGiver.alive) {
+      // the taker was crushed while lining it up — loose ball, play on
+      restartInfo = null;
+      restartGiver = null;
+      phase = 'play';
+      return;
+    }
     if (r.type === 'corner') {
       const atk = r.forSide === 'home' ? 1 : -1;
       giveBall(ball, restartGiver, r.forSide);
@@ -313,12 +393,31 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     phase = 'play';
   }
 
-  function fullTime() {
+  function endMatch(reason = 'goals') {
     phase = 'full';
     phaseT = 2.2;
+    storm.meteors.length = 0;
+    meteorFx.clear();
+    const homeAlive = aliveCount('home');
+    const awayAlive = aliveCount('away');
+    let winner; let decidedBy;
+    if (reason === 'annihilation') {
+      winner = homeAlive > 0 && awayAlive === 0 ? 'home'
+        : awayAlive > 0 && homeAlive === 0 ? 'away' : null;
+      decidedBy = 'annihilation';
+    } else {
+      ({ winner, decidedBy } = decideWinner(ref, homeAlive, awayAlive));
+    }
+    finalResult = {
+      homeScore: ref.score.home, awayScore: ref.score.away, scorers: ref.scorers,
+      homeAlive, awayAlive, winner, decidedBy,
+    };
     audio.whistle(3);
     audio.cheer(0.6);
-    hud.overlay(`<div class="big-call">FULL TIME<small>${homeTeam.code} ${ref.score.home} – ${ref.score.away} ${awayTeam.code}</small></div>`, 2100);
+    const line = `${homeTeam.code} ${ref.score.home} – ${ref.score.away} ${awayTeam.code}`;
+    hud.overlay(reason === 'annihilation'
+      ? `<div class="big-call">ANNIHILATION!<small>${line}</small></div>`
+      : `<div class="big-call">FULL TIME<small>${line}</small></div>`, 2100);
     feed.final(ref.score.home, ref.score.away);
   }
 
@@ -333,7 +432,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     if (carrier === p) {
       // --- I have the ball ---
       const gk = gkOf(p.side === 'home' ? 'away' : 'home');
-      const gkDist = Math.hypot(gk.pos.x - p.pos.x, gk.pos.z - p.pos.z);
+      const gkDist = gk ? Math.hypot(gk.pos.x - p.pos.x, gk.pos.z - p.pos.z) : 99;
       if (aiShouldShoot(p, p.attackDir, gkDist, diff) && Math.random() < 0.55) {
         executeShoot(p, rand(0.35, 1.0), rand(-0.4, 0.4) + diff.shootErr * rand(-1, 1));
         return;
@@ -527,6 +626,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     for (let i = 0; i < players.length; i++) {
       for (let j = i + 1; j < players.length; j++) {
         const a = players[i]; const b = players[j];
+        if (!a.alive || !b.alive) continue;
         const dx = b.pos.x - a.pos.x; const dz = b.pos.z - a.pos.z;
         const d2 = dx * dx + dz * dz;
         if (d2 > 0.72 * 0.72 || d2 === 0) continue;
@@ -543,7 +643,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     if (ball.owner) return;
     let best = null; let bd = Infinity;
     for (const p of players) {
-      if (p.downT > 0 || p.slideT > 0 || p.stumbleT > 0) continue;
+      if (!p.alive || p.downT > 0 || p.slideT > 0 || p.stumbleT > 0) continue;
       if (ball.lockId === p.id) continue;
       const isAI = !p.controlled;
       if (isAI && p.role !== 'GK' && ball.freeT < diff.reaction * 0.8) continue;
@@ -588,7 +688,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
 
     // --- controlled player ---
     const c = controlled;
-    if (c && c.downT <= 0 && c.slideT <= 0) {
+    if (c && c.alive && c.downT <= 0 && c.slideT <= 0) {
       c.target = { x: c.pos.x + snap.mx * 3, z: c.pos.z + snap.mz * 3 };
       c.wantSprint = snap.sprint;
       steer(c, dt, 1);
@@ -614,7 +714,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
 
     // --- AI ---
     for (const p of players) {
-      if (p.controlled) continue;
+      if (!p.alive || p.controlled) continue;
       if (p.role === 'GK') { gkLogic(p, dt); continue; }
       p.thinkT -= dt;
       if (p.thinkT <= 0) {
@@ -625,7 +725,7 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     }
 
     // --- integrate + separate ---
-    for (const p of players) integrate(p, dt);
+    for (const p of players) if (p.alive) integrate(p, dt);
     separate();
 
     // --- ball ---
@@ -648,8 +748,12 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     if (out) { onOut(out); return; }
 
     // --- clock / stats ---
-    if (tickClock(ref, dt)) { fullTime(); return; }
+    if (tickClock(ref, dt)) { endMatch(); return; }
     possT[ball.owner ? ball.owner.side : ball.lastTouch || 'home'] += dt;
+
+    // --- meteor storm (from the 1-minute mark on) ---
+    meteorStep(dt);
+    if (phase !== 'play') return; // the storm may have ended the match
 
     // --- presentation ---
     feed.update(elapsed, possT.home / (possT.home + possT.away));
@@ -679,6 +783,11 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     camLook.x = damp(camLook.x, lx, 4.5, dt);
     camLook.y = damp(camLook.y, ly, 4.5, dt);
     camLook.z = damp(camLook.z, lz, 4.5, dt);
+    if (camShake > 0) { // meteor impacts rattle the broadcast camera
+      camShake = Math.max(0, camShake - dt * 1.8);
+      camPos.x += (Math.random() - 0.5) * camShake * 1.6;
+      camPos.y += (Math.random() - 0.5) * camShake * 1.2;
+    }
     camera.position.copy(camPos);
     camera.lookAt(camLook);
   }
@@ -691,6 +800,18 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
     const pulse = 1 + Math.sin(time * 6) * 0.06;
     ring.scale.set(pulse, pulse, 1);
     for (const p of players) {
+      if (!p.alive) { // corpse: lies flat for a moment, then gone
+        if (p.deadT > 0) {
+          p.deadT -= dt;
+          if (p.deadT <= 0) p.rig.group.visible = false;
+          p.rig.group.position.x = p.pos.x;
+          p.rig.group.position.z = p.pos.z;
+          animateRig(p.rig, dt, {
+            speed01: 0, kick: 0, celebrate: 0, dive: 0, down: 1, idleBreath: 0,
+          });
+        }
+        continue;
+      }
       p.rig.group.position.x = p.pos.x;
       p.rig.group.position.z = p.pos.z;
       p.rig.group.rotation.y = p.facing;
@@ -767,13 +888,14 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
           phaseT -= dt;
           if (phaseT <= 0 && !exitSent) {
             exitSent = true;
-            onExit({ homeScore: ref.score.home, awayScore: ref.score.away, scorers: ref.scorers });
+            onExit(finalResult);
           }
           break;
         default: break;
       }
       updateCamera(dt);
       updateVisuals(dt);
+      meteorFx.update(storm, dt);
       stadium.update(dt, excitement);
       audio.setExcitement(excitement);
       hud.setClock(ref.clock, duration);

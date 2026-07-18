@@ -38,6 +38,22 @@ export const PLAYER = {
   SWITCH_COOLDOWN: 0.25,
 };
 
+export const METEOR = {
+  START_AT: 60,          // seconds of match time before the storm begins
+  FIRST_DELAY: 1.2,      // pause between the warning and the first rock
+  SPAWN_MIN: 1.7,        // seconds between meteors (min)
+  SPAWN_MAX: 3.1,        // seconds between meteors (max)
+  SPAWN_HEIGHT: 55,      // drop altitude
+  SPEED: 26,             // medium fall speed
+  DRIFT: 3.5,            // slight horizontal drift so they don't fall perfectly straight
+  RADIUS: 1.0,           // medium sized rock
+  KILL_RADIUS: 2.8,      // direct hit — player dies
+  DOWN_RADIUS: 4.8,      // shockwave — player knocked down
+  TARGET_PLAYER_CHANCE: 0.5, // bias a strike near a random player (else random pitch point)
+  TARGET_JITTER: 3.5,    // scatter around the targeted point (meters)
+  BALL_BLAST: 16,        // loose-ball blast speed from the crater
+};
+
 export const DIFFICULTY = {
   amateur: {
     label: 'Amateur',

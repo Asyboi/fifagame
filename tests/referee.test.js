@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   crossedGoalLine, outOfBounds, classifyRestart, restartSpot,
-  createReferee, tickClock, awardGoal,
+  createReferee, tickClock, awardGoal, decideWinner,
 } from '../src/game/referee.js';
 import { PITCH, BALL } from '../src/config.js';
 
@@ -78,4 +78,27 @@ test('awardGoal tracks score and football-minute scorers', () => {
   assert.equal(ref.score.home, 1);
   assert.equal(ref.scorers[0].minute, 45);
   assert.equal(ref.scorers[0].side, 'home');
+});
+
+test('decideWinner: goals decide it first', () => {
+  const ref = createReferee({ homeId: 'arg', awayId: 'esp', duration: 300 });
+  awardGoal(ref, 'home', 'A. One');
+  assert.deepEqual(decideWinner(ref, 2, 7), { winner: 'home', decidedBy: 'goals' });
+  awardGoal(ref, 'away', 'B. Two');
+  awardGoal(ref, 'away', 'C. Three');
+  assert.deepEqual(decideWinner(ref, 7, 1), { winner: 'away', decidedBy: 'goals' });
+});
+
+test('decideWinner: level on goals -> survivors decide it', () => {
+  const ref = createReferee({ homeId: 'arg', awayId: 'esp', duration: 300 });
+  awardGoal(ref, 'home', 'A. One');
+  awardGoal(ref, 'away', 'B. Two');
+  assert.deepEqual(decideWinner(ref, 5, 3), { winner: 'home', decidedBy: 'survivors' });
+  assert.deepEqual(decideWinner(ref, 1, 4), { winner: 'away', decidedBy: 'survivors' });
+});
+
+test('decideWinner: level on goals and survivors -> draw', () => {
+  const ref = createReferee({ homeId: 'arg', awayId: 'esp', duration: 300 });
+  assert.deepEqual(decideWinner(ref, 7, 7), { winner: null, decidedBy: 'draw' });
+  assert.deepEqual(decideWinner(ref, 4, 4), { winner: null, decidedBy: 'draw' });
 });

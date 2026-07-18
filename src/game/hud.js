@@ -12,6 +12,7 @@ export function createHud(root) {
       <div class="score as">0</div>
       <div class="team away"><span class="code">AWY</span><span class="dot"></span></div>
       <div class="clock">00:00</div>
+      <div class="alive" title="Players left on each side (meteor survivors)"><span class="n ah">7</span>v<span class="n aa">7</span></div>
     </div>
     <div class="player-tag">
       <div class="pname">—</div>
@@ -31,6 +32,8 @@ export function createHud(root) {
     hs: root.querySelector('.hs'),
     as: root.querySelector('.as'),
     clock: root.querySelector('.clock'),
+    ah: root.querySelector('.alive .ah'),
+    aa: root.querySelector('.alive .aa'),
     tag: root.querySelector('.player-tag'),
     pname: root.querySelector('.pname'),
     ppos: root.querySelector('.ppos'),
@@ -58,6 +61,8 @@ export function createHud(root) {
     },
 
     setScore(h, a) { el.hs.textContent = h; el.as.textContent = a; },
+
+    setAlive(h, a) { el.ah.textContent = h; el.aa.textContent = a; },
 
     setClock(secondsLeft, duration) {
       const s = Math.ceil(secondsLeft);

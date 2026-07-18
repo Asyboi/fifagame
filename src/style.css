@@ -169,6 +169,11 @@ body { font-family: var(--font); color: var(--wsc-text); user-select: none; -web
   border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 .scorebug .clock.late { color: #ff5d5d; animation: pulse 1s infinite; }
+.scorebug .alive {
+  background: rgba(8, 12, 26, 0.92); padding: 8px 12px; font-size: 13px; color: var(--wsc-dim);
+  border-left: 1px solid rgba(255, 255, 255, 0.12); display: flex; align-items: center; gap: 5px;
+}
+.scorebug .alive .n { color: var(--wsc-text); font-size: 17px; }
 @keyframes pulse { 50% { opacity: 0.45; } }
 
 .player-tag {

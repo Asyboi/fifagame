@@ -92,3 +92,16 @@ export function awardGoal(ref, side, scorerName) {
   ref.scorers.push({ name: scorerName || 'Unknown', side, minute });
   return ref.score[side];
 }
+
+/**
+ * Full-time winner. Goals first; if level, the side with more players left
+ * alive wins (meteor survival); still level -> draw.
+ * Returns { winner: 'home'|'away'|null, decidedBy: 'goals'|'survivors'|'draw' }.
+ */
+export function decideWinner(ref, homeAlive, awayAlive) {
+  if (ref.score.home > ref.score.away) return { winner: 'home', decidedBy: 'goals' };
+  if (ref.score.away > ref.score.home) return { winner: 'away', decidedBy: 'goals' };
+  if (homeAlive > awayAlive) return { winner: 'home', decidedBy: 'survivors' };
+  if (awayAlive > homeAlive) return { winner: 'away', decidedBy: 'survivors' };
+  return { winner: null, decidedBy: 'draw' };
+}

@@ -68,6 +68,15 @@ audio files). AI covers teammates and opponents: formation shifting, pressing,
 dribbling, passing under pressure, shooting in range, and a goalkeeper who
 positions, rushes loose balls, dives, parries and distributes.
 
+**Meteor storm:** once the 1-minute mark hits (in any match length), medium
+speed, medium sized meteors start falling onto the pitch — red warning rings
+mark the strikes. A direct hit kills a player (either side, keeper included),
+the shockwave knocks nearby players down, and loose balls get blasted out of
+the crater. The dead stay dead. You can now win three ways: outscore the
+opposition, wipe out their entire team (instant win by annihilation), or — if
+the score is level at full time — have more survivors on the field. The
+scorebug tracks how many players each side has left.
+
 ## Prediction market hook (optional)
 
 If the companion market service (see `market/`) is running, point the game at
@@ -94,11 +103,14 @@ football clock.
 
 ## Verification
 
-Automated (`npm test`, 36 tests): ball physics (gravity, drag, bounce, post /
+Automated (`npm test`, 47 tests): ball physics (gravity, drag, bounce, post /
 net collision), goal-line and out-of-bounds classification, corner/goal-kick/
-throw-in rules, clock and scorers, pass targeting, player switching, formation
-anchors, shoot aim, photo color sampler (detection + fallbacks), market feed
-(payloads, throttling, ARG/ESP gating, dead-server safety).
+throw-in rules, clock and scorers, winner decision (goals → meteor survivors
+tiebreak), meteor storm (activation at the 1-minute mark, spawn cadence,
+fall/impact, kill/shockwave resolution, strike targeting), pass targeting,
+player switching, formation anchors, shoot aim, photo color sampler (detection
++ fallbacks), market feed (payloads, throttling, ARG/ESP gating, dead-server
+safety).
 
 Headless browser harness (Puppeteer + system Chrome, not part of `npm test`):
 drove the real game end-to-end — **25/25 checks**: title → photo upload with a
@@ -131,8 +143,10 @@ src/
   avatar/sampler.js   photo → skin/hair color sampling (client-side only)
   game/
     ball.js           arcade ball physics (pure)
-    referee.js        goals / out / restarts / clock (pure)
+    referee.js        goals / out / restarts / clock / winner (pure)
     aicore.js         pass targeting, switching, anchors, shot aim (pure)
+    meteors.js        meteor storm state, spawning, impact resolution (pure)
+    meteorfx.js       meteor rocks, warning rings, explosions, scorch marks
     match.js          orchestrator: gameplay, AI, camera, flow
     rig.js            low-poly player mesh + procedural animation
     stadium.js        pitch, goals+nets, stands, crowd, boards, floodlights

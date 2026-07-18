@@ -146,6 +146,19 @@ export function createAudio() {
       noise({ dur: 1.2, vol: 0.25, freq: 300, q: 0.6, type: 'lowpass' });
     },
 
+    /** Meteor impact: deep boom + debris crackle. */
+    boom() {
+      tone({ freq: 95, type: 'sine', dur: 0.55, vol: 0.5, slideTo: 26 });
+      noise({ dur: 0.55, vol: 0.45, freq: 220, q: 0.4, type: 'lowpass' });
+      noise({ dur: 0.18, vol: 0.28, freq: 1900, q: 0.8 });
+    },
+
+    /** Meteor incoming: faint descending whistle. */
+    whoosh() {
+      noise({ dur: 0.7, vol: 0.09, freq: 2400, q: 2 });
+      tone({ freq: 950, type: 'sine', dur: 0.7, vol: 0.04, slideTo: 210 });
+    },
+
     ui() {
       tone({ freq: 880, type: 'sine', dur: 0.07, vol: 0.12 });
     },

@@ -316,7 +316,18 @@ export function showResult(app, result, { onRematch, onChangeTeams, onTitle }) {
   const home = teamById(app.homeTeamId);
   const away = teamById(app.awayTeamId);
   const h = result.homeScore; const a = result.awayScore;
-  const headline = h > a ? 'You win!' : h < a ? 'You lose' : 'Draw';
+  const winner = result.winner !== undefined
+    ? result.winner
+    : (h > a ? 'home' : h < a ? 'away' : null); // fallback for old callers
+  const headline = winner === 'home' ? 'You win!' : winner === 'away' ? 'You lose' : 'Draw';
+  let subline = '';
+  if (result.decidedBy === 'annihilation') {
+    subline = winner === 'home' ? '☄ Every opponent was crushed — victory by annihilation!'
+      : winner === 'away' ? '☄ Your whole team was crushed — defeat by annihilation!'
+        : '☄ Nobody survived the meteor storm';
+  } else if (result.decidedBy === 'survivors') {
+    subline = `Level on goals — survivors decide it: ${home.code} ${result.homeAlive} – ${result.awayAlive} ${away.code}`;
+  }
   const scorers = result.scorers.length
     ? result.scorers.map((s) => `<div>${s.minute}' ${s.name} <span style="color:var(--wsc-dim)">(${s.side === 'home' ? home.code : away.code})</span></div>`).join('')
     : '<div style="color:var(--wsc-dim)">No goals — a tactical masterpiece.</div>';
@@ -324,6 +335,7 @@ export function showResult(app, result, { onRematch, onChangeTeams, onTitle }) {
     <div class="screen">
       <h2>${headline}</h2>
       <div class="result-score">${home.code} ${h} – ${a} ${away.code}</div>
+      ${subline ? `<div style="color:var(--wsc-gold);letter-spacing:0.08em;font-weight:700">${subline}</div>` : ''}
       <div class="panel" style="text-align:center;line-height:1.9;min-width:280px">${scorers}</div>
       <div class="btn-row">
         <button class="btn" id="rematch">Rematch</button>
