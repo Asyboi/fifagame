@@ -22,6 +22,7 @@ import {
 } from './market.js';
 import { spawnBots, runBotRound } from './bots.js';
 import { startMatchSim } from './matchSim.js';
+import { startAgents, rejoinAgents } from './agents.js';
 
 const PORT = process.env.PORT || 8787;
 const PUBLIC_DIR = pathJoin(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -173,6 +174,7 @@ async function postReset(req, res) {
   market = createMatchMarket();
   bots = spawnBots(market);
   for (const h of humans) join(market, { ...h, kind: 'human' });
+  rejoinAgents(market);
 
   pushFeed(market, { type: 'system', text: 'New match — everyone back to $100' });
   broadcast();
@@ -258,7 +260,16 @@ function end(res, code, payload, type = 'text/plain') {
   res.end(payload);
 }
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`[market] listening on http://localhost:${PORT}`);
   console.log(`[market] simulator ${USE_SIM ? 'armed' : 'disabled'}`);
+
+  // Agents read the live market through a getter rather than a captured value,
+  // so they follow /reset onto the new match instead of trading into a market
+  // nobody is watching any more.
+  try {
+    await startAgents(() => market);
+  } catch (err) {
+    console.error('[market] agents failed to start, continuing without them:', err.message);
+  }
 });

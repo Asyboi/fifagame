@@ -11,7 +11,10 @@ export function createLedger() {
 }
 
 export function addTrader(ledger, { id, name, kind = 'human', cash = STARTING_CASH }) {
-  const trader = { id, name, kind, cash, yes: 0, no: 0, trades: 0 };
+  // startingCash is per-trader, not the global constant: bots are seeded with
+  // more capital than humans, and measuring their P&L against the human figure
+  // showed all forty of them up $50 before a ball was kicked.
+  const trader = { id, name, kind, cash, startingCash: cash, yes: 0, no: 0, trades: 0 };
   ledger.traders.set(id, trader);
   return trader;
 }
@@ -45,7 +48,7 @@ export function equity(trader, priceYes) {
 }
 
 export function pnl(trader, priceYes) {
-  return equity(trader, priceYes) - STARTING_CASH;
+  return equity(trader, priceYes) - trader.startingCash;
 }
 
 // Final settlement: winning shares pay $1, losing shares pay nothing.
