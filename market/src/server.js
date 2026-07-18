@@ -33,9 +33,13 @@ const USE_SIM = process.env.USE_SIM !== 'false';
 const BOT_ROUND_MS = 400;
 const BROADCAST_MS = 250;
 const MAX_BET = 25;
+const RESET_TOKEN = process.env.RESET_TOKEN || '';
 
-const market = createMatchMarket();
-const bots = spawnBots(market);
+// Mutable so /reset can swap in a fresh match without restarting the process.
+// On a hosted box a restart is a 30-60s cold start, which is not something you
+// want to do in front of a room between demos.
+let market = createMatchMarket();
+let bots = spawnBots(market);
 const clients = new Set();
 
 let gameConnected = false;
@@ -92,6 +96,10 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/event') return await postEvent(req, res);
     if (req.method === 'POST' && url.pathname === '/join') return await postJoin(req, res);
     if (req.method === 'POST' && url.pathname === '/bet') return await postBet(req, res);
+    if (req.method === 'POST' && url.pathname === '/reset') return await postReset(req, res);
+    // Cheap endpoint for an uptime pinger to hit, so a free-tier host does not
+    // spin the service down while nobody is betting.
+    if (req.method === 'GET' && url.pathname === '/healthz') return end(res, 200, 'ok');
     if (req.method === 'GET' && url.pathname === '/state') return json(res, 200, snapshot(market));
     if (req.method === 'GET' && url.pathname === '/me') {
       // Clients track their own position between bets, but settlement rewrites
@@ -140,6 +148,35 @@ async function postEvent(req, res) {
   }
 
   handleEvent(event);
+  return json(res, 200, { ok: true });
+}
+
+// Start a fresh match, keeping connected clients attached. Their phones simply
+// see a new match appear rather than having to rescan the QR code.
+//
+// Guarded by RESET_TOKEN so a curious audience member with the URL cannot wipe
+// the market mid-demo.
+async function postReset(req, res) {
+  const { token } = (await body(req)) ?? {};
+  if (RESET_TOKEN && token !== RESET_TOKEN) return json(res, 403, { error: 'bad token' });
+
+  // Carry the audience over to the new match with a fresh $100 each. Without
+  // this their phones keep a trader id the new market has never heard of, and
+  // every bet comes back rejected until they reload -- which is not something
+  // you can talk a room through mid-demo.
+  const humans = [...market.ledger.traders.values()]
+    .filter((t) => t.kind === 'human')
+    .map(({ id, name }) => ({ id, name }));
+
+  if (sim) { sim.stop(); sim = null; }
+  gameConnected = false;
+  market = createMatchMarket();
+  bots = spawnBots(market);
+  for (const h of humans) join(market, { ...h, kind: 'human' });
+
+  pushFeed(market, { type: 'system', text: 'New match — everyone back to $100' });
+  broadcast();
+  console.log('[market] reset');
   return json(res, 200, { ok: true });
 }
 

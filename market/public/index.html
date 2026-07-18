@@ -89,8 +89,12 @@
   }
   .toast.show { opacity: 1; }
 
+  .join-card { display: none; }
+  .join-url { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+
   /* Projector: same DOM, wider grid, bigger type. */
   @media (min-width: 900px) {
+    .join-card { display: block; }
     .wrap { max-width: 1400px; grid-template-columns: 1.35fr 1fr; align-items: start; }
     .span-all { grid-column: 1 / -1; }
     .price-big { font-size: 108px; }
@@ -123,6 +127,18 @@
     <div class="row tiny dim" style="margin-top:6px">
       <span>solid = market price · dashed = model fair value</span>
       <span id="conn">connecting…</span>
+    </div>
+  </div>
+
+  <!-- Projector only: the room needs to see where to go. Hidden on phones,
+       which are already here. -->
+  <div class="card join-card span-all" id="joincard">
+    <div class="row">
+      <div>
+        <div class="tiny dim">SCAN OR VISIT · $100 PAPER MONEY</div>
+        <div class="join-url mono" id="joinurl"></div>
+      </div>
+      <div id="qrslot"></div>
     </div>
   </div>
 
@@ -184,6 +200,10 @@ if (!name) {
     || 'guest' + Math.floor(Math.random() * 900 + 100);
   localStorage.setItem('mktName', name);
 }
+
+// Shown large on the projector so the room can type it in without a QR code,
+// and so a wrong URL is obvious to us before anyone tries to scan.
+$('joinurl').textContent = location.host + location.pathname.replace(/\/$/, '');
 
 let me = null;
 let price = 0.5;
