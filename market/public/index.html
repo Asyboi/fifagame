@@ -3,187 +3,369 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<meta name="theme-color" content="#0b1020">
-<title>Argentina vs Spain — Live Market</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2300b578'/%3E%3Cpath d='M9 20l5-6 4 4 5-8' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Argentina wins? — WSC Live Market</title>
 <style>
-  /* One page, two audiences. Phones get the stacked betting view; the projector
-     gets the same markup in a wide grid. No separate dashboard to keep in sync. */
+  /* Kalshi-style light trading UI. One page, two audiences: phones get the
+     stacked betting view, the projector gets the same markup in a wide grid. */
   :root {
-    --bg: #0b1020;
-    --panel: #141b33;
-    --panel-2: #1b2444;
-    --line: #2a3560;
-    --text: #eef2ff;
-    --dim: #8b97c4;
-    --arg: #6cace4;
-    --esp: #e04b5f;
-    --win: #35d39a;
-    --lose: #ff6b7f;
+    --bg: #f4f5f3;
+    --card: #ffffff;
+    --line: #e4e7e2;
+    --line-2: #eef0ec;
+    --text: #131b16;
+    --dim: #6d7a72;
+    --yes: #00b578;
+    --yes-dark: #009664;
+    --yes-tint: #e5f7ef;
+    --no: #ef4b53;
+    --no-dark: #d63a42;
+    --no-tint: #fdecec;
+    --arg: #5b9bd5;
+    --esp: #d64545;
+    --gold: #b98a1d;
+    --shadow: 0 1px 2px rgba(19, 27, 22, 0.05), 0 4px 16px rgba(19, 27, 22, 0.05);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     -webkit-text-size-adjust: 100%;
+    letter-spacing: -0.01em;
   }
-  .wrap { max-width: 520px; margin: 0 auto; padding: 14px; display: grid; gap: 12px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   .dim { color: var(--dim); }
   .tiny { font-size: 12px; }
-  .mono { font-variant-numeric: tabular-nums; }
 
-  /* scoreboard */
-  .score { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
-  .clock { font-size: 15px; color: var(--dim); }
-  .status-live { color: var(--win); }
-  .status-settled { color: var(--dim); }
-
-  /* the price, the single most important number on screen */
-  .price-big { font-size: 62px; font-weight: 800; line-height: 1; letter-spacing: -3px; }
-  .price-sub { font-size: 13px; color: var(--dim); margin-top: 2px; }
-  .fair { font-size: 13px; color: var(--dim); }
-
-  #chart { width: 100%; height: 110px; display: block; }
-
-  /* betting */
-  .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .team-btn {
-    border: 2px solid var(--line); background: var(--panel-2); color: var(--text);
-    border-radius: 12px; padding: 12px 8px; font-size: 15px; font-weight: 700;
-    cursor: pointer; text-align: center; transition: border-color .12s, background .12s;
+  /* ---------- top nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
   }
-  .team-btn[aria-pressed="true"] { background: #223059; }
-  .team-btn.arg[aria-pressed="true"] { border-color: var(--arg); }
-  .team-btn.esp[aria-pressed="true"] { border-color: var(--esp); }
-  .team-btn .pc { display: block; font-size: 20px; margin-top: 3px; }
-  .team-btn.arg .pc { color: var(--arg); }
-  .team-btn.esp .pc { color: var(--esp); }
+  .nav-in { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .wordmark { font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
+  .wordmark em { color: var(--yes); font-style: normal; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+    font-size: 12px; font-weight: 700; color: var(--dim); background: var(--card);
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #b6bdb8; }
+  .pill.live { color: var(--yes-dark); border-color: #bfe8d6; background: var(--yes-tint); }
+  .pill.live .dot { background: var(--yes); animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  .pill.resolved { color: var(--dim); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .trader-chip {
+    display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+    background: var(--card); border-radius: 999px; padding: 5px 12px 5px 6px; font-weight: 700;
+  }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--yes-tint); color: var(--yes-dark); font-size: 12px; font-weight: 800;
+  }
+  .cash-chip { font-weight: 800; color: var(--yes-dark); }
 
-  .stakes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  /* ---------- layout ---------- */
+  .wrap { max-width: 560px; margin: 0 auto; padding: 14px; display: grid; gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+  /* ---------- market header ---------- */
+  .mkt-title { font-size: 13px; color: var(--dim); font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mkt-q { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin: 2px 0 10px; }
+  .flag { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; }
+  .flag.arg { background: linear-gradient(180deg, #75aadb 33%, #fff 33% 66%, #75aadb 66%); border: 1px solid #cfd8e3; }
+  .flag.esp { background: linear-gradient(180deg, #aa151b 25%, #f1bf00 25% 75%, #aa151b 75%); }
+
+  .score-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .score { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; }
+  .minute { font-size: 13px; font-weight: 700; color: var(--dim); }
+
+  .price-line { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .price-big { font-size: 64px; font-weight: 800; line-height: 0.95; letter-spacing: -0.06em; }
+  .price-big sup { font-size: 26px; font-weight: 700; color: var(--dim); letter-spacing: 0; }
+  .delta { font-size: 14px; font-weight: 800; margin-left: 8px; }
+  .delta.up { color: var(--yes-dark); }
+  .delta.down { color: var(--no-dark); }
+  .price-sub { text-align: right; font-size: 13px; color: var(--dim); }
+  .price-sub b { color: var(--text); }
+
+  /* probability bar */
+  .prob { display: flex; height: 22px; border-radius: 7px; overflow: hidden; margin: 12px 0 4px; font-size: 12px; font-weight: 800; }
+  .prob .p-yes { background: var(--yes); color: #fff; display: flex; align-items: center; padding-left: 8px; transition: width 0.3s ease; min-width: 34px; white-space: nowrap; overflow: hidden; }
+  .prob .p-no { background: #f0c9cb; color: var(--no-dark); flex: 1; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; white-space: nowrap; overflow: hidden; }
+  .prob-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+
+  #chart { width: 100%; height: 120px; display: block; background: var(--card); border-radius: 8px; }
+  .chart-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-top: 6px; }
+  .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+
+  /* ---------- trade ticket ---------- */
+  .ticket-title { font-weight: 800; font-size: 15px; margin-bottom: 2px; }
+  .ticket-sub { font-size: 12px; color: var(--dim); margin-bottom: 12px; }
+  .outcome { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .oc-btn {
+    border: 1.5px solid var(--line); background: var(--card); border-radius: 10px;
+    padding: 10px; cursor: pointer; text-align: left; transition: border-color 0.12s, background 0.12s;
+  }
+  .oc-btn .oc-name { font-size: 13px; font-weight: 700; color: var(--dim); }
+  .oc-btn .oc-price { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
+  .oc-btn.yes .oc-price { color: var(--yes-dark); }
+  .oc-btn.no .oc-price { color: var(--no-dark); }
+  .oc-btn.yes[aria-pressed="true"] { border-color: var(--yes); background: var(--yes-tint); }
+  .oc-btn.no[aria-pressed="true"] { border-color: var(--no); background: var(--no-tint); }
+
+  .amt-label { font-size: 12px; font-weight: 700; color: var(--dim); margin: 12px 0 6px; }
+  .stakes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .stake {
-    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
-    border-radius: 10px; padding: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
+    border: 1.5px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 10px; padding: 10px; font-size: 15px; font-weight: 800; cursor: pointer;
   }
-  .stake:disabled { opacity: .35; cursor: not-allowed; }
-  .stake:active { background: #2c3a6b; }
+  .stake[aria-pressed="true"] { border-color: var(--text); background: #f0f1ee; }
+  .stake:disabled { opacity: 0.4; cursor: not-allowed; }
+  .oc-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-  .wallet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-  .wallet div span { display: block; font-size: 19px; font-weight: 700; margin-top: 2px; }
-  .up { color: var(--win); } .down { color: var(--lose); }
+  .est {
+    display: flex; justify-content: space-between; font-size: 13px;
+    border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 10px;
+  }
+  .est b { font-weight: 800; }
+  .buy {
+    width: 100%; margin-top: 10px; border: 0; border-radius: 10px; padding: 14px;
+    font-size: 16px; font-weight: 800; color: #fff; cursor: pointer; letter-spacing: -0.01em;
+    transition: filter 0.12s, transform 0.06s;
+  }
+  .buy:active { transform: scale(0.99); }
+  .buy.yes { background: var(--yes); }
+  .buy.yes:hover { background: var(--yes-dark); }
+  .buy.no { background: var(--no); }
+  .buy.no:hover { background: var(--no-dark); }
+  .buy:disabled { opacity: 0.5; cursor: not-allowed; }
+  .rules-note { font-size: 12px; color: var(--dim); margin-top: 10px; line-height: 1.5; }
 
-  /* feed + leaderboard */
+  /* ---------- portfolio ---------- */
+  .pf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: left; }
+  .pf .k { font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.04em; }
+  .pf .v { display: block; font-size: 18px; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; }
+  .up { color: var(--yes-dark); }
+  .down { color: var(--no-dark); }
+
+  /* ---------- activity + leaderboard ---------- */
+  .card-h { font-weight: 800; font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
   ul { list-style: none; margin: 0; padding: 0; }
-  .feed li { padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .feed li { padding: 7px 0; border-bottom: 1px solid var(--line-2); font-size: 13px; display: flex; gap: 6px; align-items: baseline; }
   .feed li:last-child { border-bottom: 0; }
   .feed .who { font-weight: 700; }
-  .k-bot { color: var(--dim); } .k-human { color: var(--arg); } .k-agent { color: #d7a3ff; }
-  .goal-line { color: var(--win); font-weight: 700; }
-  .lb li { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .k-human { color: var(--text); }
+  .k-agent { color: #8b5cf6; }
+  .k-bot { color: var(--dim); }
+  .goal-line { color: var(--yes-dark); font-weight: 800; }
+  .lb li { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+  .lb li:last-child { border-bottom: 0; }
+  .lb .rank { color: var(--dim); width: 22px; display: inline-block; }
+  .lb .you { background: var(--yes-tint); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; }
 
-  .toast {
-    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
-    background: #223059; border: 1px solid var(--line); padding: 10px 16px;
-    border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none;
-    transition: opacity .2s; z-index: 10;
-  }
-  .toast.show { opacity: 1; }
-
+  /* ---------- join card (projector) ---------- */
   .join-card { display: none; }
-  .join-url { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
-  /* White quiet-zone padding around the code: scanners need the light border,
-     and the dark page would otherwise run right up to the modules. */
-  .qr { width: 150px; height: 150px; display: block; background: #fff;
-        padding: 8px; border-radius: 10px; }
+  .join-url { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+  .qr { width: 148px; height: 148px; display: block; background: #fff; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
 
-  /* Projector: same DOM, wider grid, bigger type. */
+  /* ---------- join modal ---------- */
+  .modal-veil {
+    position: fixed; inset: 0; background: rgba(19, 27, 22, 0.45);
+    display: none; place-items: center; z-index: 50; padding: 16px;
+  }
+  .modal-veil.show { display: grid; }
+  .modal { background: var(--card); border-radius: 16px; padding: 22px; width: min(360px, 92vw); box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+  .modal h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.03em; }
+  .modal p { margin: 0 0 14px; color: var(--dim); font-size: 13px; }
+  .modal input {
+    width: 100%; border: 1.5px solid var(--line); border-radius: 10px; padding: 12px;
+    font-size: 16px; font-family: inherit; margin-bottom: 10px;
+  }
+  .modal input:focus { outline: none; border-color: var(--yes); }
+  .modal .buy { margin-top: 0; }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(8px);
+    background: var(--text); color: #fff; padding: 10px 18px;
+    border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- projector ---------- */
   @media (min-width: 900px) {
-    .join-card { display: block; }
-    .wrap { max-width: 1400px; grid-template-columns: 1.35fr 1fr; align-items: start; }
-    .span-all { grid-column: 1 / -1; }
-    .price-big { font-size: 108px; }
-    .score { font-size: 52px; }
-    #chart { height: 210px; }
-    .feed li, .lb li { font-size: 16px; }
-    body { font-size: 18px; }
+    .join-card { display: block; grid-column: 1 / -1; }
+    .wrap { max-width: 1200px; grid-template-columns: 1.5fr 1fr; align-items: start; }
+    .card-mkt { grid-column: 1; }
+    .rail-trade { grid-column: 2; }
+    .rail-activity { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .rail-activity .card { margin-top: 0 !important; }
+    .price-big { font-size: 116px; }
+    .price-big sup { font-size: 42px; }
+    .score { font-size: 44px; }
+    .mkt-q { font-size: 34px; }
+    #chart { height: 220px; }
+    body { font-size: 17px; }
+    .feed li, .lb li { font-size: 15px; }
+  }
+
+  /* ---------- small phones ---------- */
+  @media (max-width: 640px) {
+    #conn { display: none; }
+    .wordmark { font-size: 15px; white-space: nowrap; }
+    #myname { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-in { gap: 7px; padding: 8px 10px; }
   }
 </style>
 </head>
 <body>
+
+<nav>
+  <div class="nav-in">
+    <div class="wordmark">WSC <em>Market</em></div>
+    <span class="pill" id="status-pill"><span class="dot"></span><span id="status">connecting</span></span>
+    <div class="nav-right">
+      <span class="tiny dim" id="conn"></span>
+      <div class="trader-chip">
+        <span class="avatar" id="avatar">?</span>
+        <span id="myname">guest</span>
+        <span class="cash-chip mono" id="nav-cash">$100</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
 <div class="wrap">
 
-  <div class="card span-all">
-    <div class="row">
+  <!-- Market header: the question, the price, the chart -->
+  <div class="card card-mkt">
+    <div class="mkt-title">
+      <span class="flag arg"></span> Argentina vs Spain
+      <span>·</span><span id="clock">0'</span>
+      <span>·</span><span>winner market — a draw resolves <b>No</b></span>
+    </div>
+    <div class="mkt-q">Does Argentina win?</div>
+
+    <div class="score-row">
+      <div class="score mono" id="sc">0 – 0</div>
+      <div class="minute" id="min-label">PRE-MATCH</div>
+    </div>
+
+    <div class="price-line">
       <div>
-        <div class="score mono"><span id="sc">0 – 0</span></div>
-        <div class="clock">Argentina vs Spain · <span id="clock">0'</span> · <span id="status" class="status-live">warming up</span></div>
+        <span class="price-big mono" id="price">50<sup>¢</sup></span>
+        <span class="delta mono" id="delta"></span>
       </div>
-      <div style="text-align:right">
-        <div class="price-big mono" id="price">50¢</div>
-        <div class="price-sub">Argentina to win · <span class="fair" id="fair"></span></div>
+      <div class="price-sub">
+        Argentina <b>Yes</b><br>
+        model fair value <b class="mono" id="fair">—</b>
       </div>
     </div>
+
+    <div class="prob">
+      <div class="p-yes" id="prob-yes" style="width:50%">Yes 50%</div>
+      <div class="p-no" id="prob-no">No 50%</div>
+    </div>
+    <div class="prob-legend">
+      <span><span class="flag arg"></span> Argentina win</span>
+      <span><span class="flag esp"></span> Spain win or draw</span>
+    </div>
+
     <svg id="chart" viewBox="0 0 300 100" preserveAspectRatio="none" aria-label="price history">
-      <line x1="0" y1="50" x2="300" y2="50" stroke="#2a3560" stroke-width="1" vector-effect="non-scaling-stroke"/>
-      <polyline id="fairline" fill="none" stroke="#4a5891" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>
-      <polyline id="pxline" fill="none" stroke="#6cace4" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+      <line x1="0" y1="25" x2="300" y2="25" stroke="#f0f1ee" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      <line x1="0" y1="50" x2="300" y2="50" stroke="#e4e7e2" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      <line x1="0" y1="75" x2="300" y2="75" stroke="#f0f1ee" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      <polyline id="fairline" fill="none" stroke="#9aa5ad" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>
+      <polyline id="pxline" fill="none" stroke="#00b578" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
     </svg>
-    <div class="row tiny dim" style="margin-top:6px">
-      <span>solid = market price · dashed = model fair value</span>
-      <span id="conn">connecting…</span>
+    <div class="chart-legend">
+      <span><span class="swatch" style="background:var(--yes)"></span>market price
+        <span class="swatch" style="background:#9aa5ad;margin-left:12px"></span>model fair value</span>
+      <span id="seq-label"></span>
     </div>
   </div>
 
-  <!-- Projector only: the room needs to see where to go. Hidden on phones,
-       which are already here. -->
-  <div class="card join-card span-all" id="joincard">
-    <div class="row">
-      <div>
-        <div class="tiny dim">SCAN OR VISIT · $100 PAPER MONEY</div>
-        <div class="join-url mono" id="joinurl"></div>
-      </div>
-      <div id="qrslot"><svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h37v37H0z"/><path stroke="#000000" d="M4 4.5h7m2 0h4m2 0h2m1 0h3m1 0h7M4 5.5h1m5 0h1m2 0h4m9 0h1m5 0h1M4 6.5h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m1 0h3m1 0h1M4 7.5h1m1 0h3m1 0h1m1 0h2m2 0h1m3 0h2m1 0h1m2 0h1m1 0h3m1 0h1M4 8.5h1m1 0h3m1 0h1m1 0h2m1 0h5m2 0h3m1 0h1m1 0h3m1 0h1M4 9.5h1m5 0h1m1 0h1m4 0h4m3 0h1m1 0h1m5 0h1M4 10.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M12 11.5h2m1 0h1m1 0h1m1 0h1m4 0h1M4 12.5h1m1 0h5m5 0h1m1 0h2m1 0h1m4 0h5M5 13.5h2m5 0h2m5 0h2m2 0h6m3 0h1M5 14.5h1m1 0h2m1 0h2m1 0h1m1 0h2m4 0h2m4 0h2M5 15.5h1m1 0h2m2 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h1m1 0h2m1 0h1M4 16.5h1m1 0h1m1 0h3m1 0h2m2 0h1m3 0h3m1 0h1m4 0h2M4 17.5h1m3 0h1m2 0h4m2 0h3m1 0h8m3 0h1M5 18.5h2m1 0h1m1 0h1m4 0h1m1 0h5m3 0h1m3 0h2M4 19.5h1m1 0h1m2 0h1m1 0h1m1 0h2m1 0h2m1 0h1m2 0h3m2 0h2m2 0h1M4 20.5h2m1 0h2m1 0h1m3 0h3m1 0h2m1 0h1m1 0h1m5 0h2M4 21.5h2m3 0h1m2 0h1m6 0h2m1 0h7m1 0h1m1 0h1M4 22.5h1m3 0h1m1 0h1m3 0h3m4 0h2m1 0h1m1 0h3m1 0h1M4 23.5h1m2 0h1m1 0h1m8 0h1m1 0h1m2 0h2m6 0h1M4 24.5h1m1 0h2m2 0h1m2 0h2m1 0h1m3 0h2m1 0h6m1 0h3M12 25.5h1m1 0h2m1 0h3m1 0h2m1 0h1m3 0h5M4 26.5h7m2 0h1m2 0h6m1 0h2m1 0h1m1 0h3M4 27.5h1m5 0h1m1 0h1m1 0h4m1 0h1m3 0h2m3 0h1M4 28.5h1m1 0h3m1 0h1m1 0h2m2 0h1m1 0h2m1 0h1m2 0h5m1 0h1m1 0h1M4 29.5h1m1 0h3m1 0h1m1 0h3m2 0h1m1 0h4m1 0h1m4 0h2M4 30.5h1m1 0h3m1 0h1m1 0h1m2 0h3m5 0h9M4 31.5h1m5 0h1m4 0h4m1 0h1m3 0h1m4 0h1m1 0h1M4 32.5h7m1 0h1m2 0h1m1 0h1m4 0h1m4 0h2m1 0h1"/></svg></div>
-    </div>
-  </div>
-
-  <div>
+  <!-- Trade ticket (right rail on projector) -->
+  <div class="rail-trade">
     <div class="card">
-      <div class="row" style="margin-bottom:10px">
-        <strong>Place a bet</strong>
-        <span class="tiny dim">a draw settles as Spain/No</span>
+      <div class="ticket-title">Trade</div>
+      <div class="ticket-sub">Pick an outcome and an amount. Price moves as you buy.</div>
+      <div class="outcome">
+        <button class="oc-btn yes" id="btn-arg" aria-pressed="true">
+          <div class="oc-name">Yes · Argentina</div>
+          <div class="oc-price mono" id="pc-arg">50¢</div>
+        </button>
+        <button class="oc-btn no" id="btn-esp" aria-pressed="false">
+          <div class="oc-name">No · Spain/draw</div>
+          <div class="oc-price mono" id="pc-esp">50¢</div>
+        </button>
       </div>
-      <div class="teams">
-        <button class="team-btn arg" id="btn-arg" aria-pressed="true">ARGENTINA<span class="pc mono" id="pc-arg">50¢</span></button>
-        <button class="team-btn esp" id="btn-esp" aria-pressed="false">SPAIN<span class="pc mono" id="pc-esp">50¢</span></button>
-      </div>
+      <div class="amt-label">AMOUNT</div>
       <div class="stakes">
-        <button class="stake" data-amt="5">$5</button>
-        <button class="stake" data-amt="10">$10</button>
-        <button class="stake" data-amt="25">$25</button>
+        <button class="stake" data-amt="5" aria-pressed="false">$5</button>
+        <button class="stake" data-amt="10" aria-pressed="true">$10</button>
+        <button class="stake" data-amt="25" aria-pressed="false">$25</button>
       </div>
+      <div class="est">
+        <span class="dim">Est. shares</span><b class="mono" id="est-shares">—</b>
+      </div>
+      <div class="est">
+        <span class="dim">Pays if right</span><b class="mono up" id="est-pays">—</b>
+      </div>
+      <button class="buy yes" id="buy">Buy Yes · $10</button>
+      <div class="rules-note">Resolves <b>Yes</b> if Argentina beat Spain, <b>No</b> on a Spain win or a draw. Settlement pays $1 per share.</div>
     </div>
 
     <div class="card" style="margin-top:12px">
-      <div class="wallet mono">
-        <div class="dim tiny">CASH<span id="cash">$100.00</span></div>
-        <div class="dim tiny">POSITION<span id="pos">—</span></div>
-        <div class="dim tiny">P&amp;L<span id="pnl">$0.00</span></div>
+      <div class="card-h">Portfolio</div>
+      <div class="pf mono">
+        <div><span class="k">CASH</span><span class="v" id="cash">$100.00</span></div>
+        <div><span class="k">POSITION</span><span class="v" id="pos">—</span></div>
+        <div><span class="k">P&amp;L</span><span class="v" id="pnl">$0.00</span></div>
       </div>
     </div>
   </div>
 
-  <div>
+  <!-- Activity + leaderboard (full-width twin cards on projector) -->
+  <div class="rail-activity">
     <div class="card">
-      <strong>Market feed</strong>
+      <div class="card-h">Activity</div>
       <ul class="feed" id="feed"></ul>
     </div>
     <div class="card" style="margin-top:12px">
-      <div class="row"><strong>Leaderboard</strong><span class="tiny dim" id="tcount"></span></div>
+      <div class="card-h">Leaderboard <span class="tiny dim" id="tcount"></span></div>
       <ul class="lb" id="lb"></ul>
     </div>
   </div>
 
 </div>
+
+  <!-- Projector only: where the room joins. Hidden on phones, which are already here. -->
+  <div class="card join-card">
+    <div class="row">
+      <div>
+        <div class="tiny dim" style="font-weight:700;letter-spacing:0.06em">SCAN OR VISIT · $100 PAPER MONEY · BEAT THE ALGORITHMS</div>
+        <div class="join-url mono" id="joinurl"></div>
+      </div>
+      <div id="qrslot"><svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h37v37H0z"/><path stroke="#000000" d="M4 4.5h7m2 0h4m2 0h2m1 0h3m1 0h7M4 5.5h1m5 0h1m2 0h4m9 0h1m5 0h1M4 6.5h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m1 0h3m1 0h1M4 7.5h1m1 0h3m1 0h1m1 0h2m2 0h1m3 0h2m1 0h1m2 0h1m1 0h3m1 0h1M4 8.5h1m1 0h3m1 0h1m1 0h2m1 0h5m2 0h3m1 0h1m1 0h3m1 0h1M4 9.5h1m5 0h1m1 0h1m4 0h4m3 0h1m1 0h1m5 0h1M4 10.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M12 11.5h2m1 0h1m1 0h1m1 0h1m4 0h1M4 12.5h1m1 0h5m5 0h1m1 0h2m1 0h1m4 0h5M5 13.5h2m5 0h2m5 0h2m2 0h6m3 0h1M5 14.5h1m1 0h2m1 0h2m1 0h1m1 0h2m4 0h2m4 0h2M5 15.5h1m1 0h2m2 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h1m1 0h1M4 16.5h1m1 0h1m1 0h3m1 0h2m2 0h1m3 0h3m1 0h1m4 0h2M4 17.5h1m3 0h1m2 0h4m2 0h3m1 0h8m3 0h1M5 18.5h2m1 0h1m1 0h1m4 0h1m1 0h5m3 0h1m3 0h2M4 19.5h1m1 0h1m2 0h1m1 0h1m1 0h2m1 0h2m1 0h1m2 0h3m2 0h2m2 0h1M4 20.5h2m1 0h2m1 0h1m3 0h3m1 0h2m1 0h1m1 0h1m5 0h2M4 21.5h2m3 0h1m2 0h1m6 0h2m1 0h7m1 0h1m1 0h1M4 22.5h1m3 0h1m1 0h1m3 0h3m4 0h2m1 0h1m1 0h3M4 23.5h1m2 0h1m1 0h1m8 0h1m1 0h1m2 0h2m6 0h1M4 24.5h1m1 0h2m2 0h1m2 0h2m1 0h1m3 0h2m1 0h6m1 0h3M12 25.5h1m1 0h2m1 0h3m1 0h2m1 0h1m3 0h5M4 26.5h7m2 0h1m2 0h6m1 0h2m1 0h1m1 0h3M4 27.5h1m5 0h1m1 0h1m1 0h4m1 0h1m3 0h2m3 0h1M4 28.5h1m1 0h3m1 0h1m1 0h2m2 0h1m1 0h2m1 0h1m2 0h5m1 0h1m1 0h1M4 29.5h1m1 0h3m1 0h1m1 0h3m2 0h1m1 0h4m1 0h1m4 0h2M4 30.5h1m5 0h1m4 0h4m1 0h1m3 0h1m4 0h1m1 0h1M4 32.5h7m1 0h1m2 0h1m1 0h1m4 0h2m1 0h1"/></svg></div>
+    </div>
+  </div>
+<!-- Name gate replaces prompt(): cleaner first run, same localStorage identity -->
+<div class="modal-veil" id="joinmodal">
+  <div class="modal">
+    <h2>Join the market</h2>
+    <p>$100 of paper money. Top the leaderboard by full time.</p>
+    <input id="name-input" maxlength="16" placeholder="Leaderboard name" autocomplete="off">
+    <button class="buy yes" id="join-btn">Start trading</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -199,19 +381,14 @@ if (!id) {
   id = 'h:' + Math.random().toString(36).slice(2, 9);
   localStorage.setItem('mktId', id);
 }
-if (!name) {
-  name = (prompt('Name for the leaderboard?') || '').trim().slice(0, 16)
-    || 'guest' + Math.floor(Math.random() * 900 + 100);
-  localStorage.setItem('mktName', name);
-}
 
-// Shown large on the projector so the room can type it in without a QR code,
-// and so a wrong URL is obvious to us before anyone tries to scan.
 $('joinurl').textContent = location.host + location.pathname.replace(/\/$/, '');
 
 let me = null;
 let price = 0.5;
+let prevPrice = null;
 let team = 'ARG';
+let amount = 10;
 let settled = false;
 
 const api = (path, body) => fetch(path, {
@@ -225,15 +402,18 @@ const api = (path, body) => fetch(path, {
 function renderMe() {
   if (!me) return;
   $('cash').textContent = money(me.cash);
+  $('nav-cash').textContent = `$${Math.round(me.cash)}`;
+  $('myname').textContent = me.name;
+  $('avatar').textContent = (me.name[0] || '?').toUpperCase();
   const net = me.yes - me.no;
   $('pos').textContent = Math.abs(net) < 0.5 ? '—'
-    : `${net > 0 ? 'ARG' : 'ESP'} ${Math.abs(net).toFixed(0)}`;
+    : `${net > 0 ? 'YES' : 'NO'} ${Math.abs(net).toFixed(0)}`;
 
   const equity = settled ? me.cash : me.cash + me.yes * price + me.no * (1 - price);
   const pnl = equity - me.startingCash;
   const el = $('pnl');
   el.textContent = (pnl >= 0 ? '+' : '−') + money(Math.abs(pnl)).slice(1);
-  el.className = pnl >= 0 ? 'up' : 'down';
+  el.className = 'v ' + (pnl >= 0 ? 'up' : 'down');
 }
 
 function renderFeed(feed) {
@@ -242,15 +422,17 @@ function renderFeed(feed) {
       return `<li class="goal-line">⚽ GOAL — ${f.team === 'ARG' ? 'Argentina' : 'Spain'} ${f.minute}'</li>`;
     }
     if (f.type === 'final') {
-      return `<li class="goal-line">FULL TIME ${f.argScore}–${f.espScore}</li>`;
+      return `<li class="goal-line">🏁 FULL TIME ${f.argScore}–${f.espScore}</li>`;
     }
     if (f.type === 'system') return `<li class="dim">${f.text}</li>`;
     if (f.type === 'agent') {
       return `<li><span class="who k-agent">${f.trader}</span> <span class="dim">${f.text}</span></li>`;
     }
-    return `<li><span class="who k-${f.kind}">${f.trader}</span> `
-      + `<span class="${f.team === 'ARG' ? 'k-human' : ''}">${f.team}</span> `
-      + `<span class="dim mono">${money(f.spent)} @ ${cents(f.price)}</span></li>`;
+    const side = f.team === 'ARG' ? 'Yes' : 'No';
+    const cls = f.team === 'ARG' ? 'up' : 'down';
+    return `<li><span class="who k-${f.kind}">${f.trader}</span>`
+      + `<span class="dim">bought</span> <b class="${cls}">${side}</b>`
+      + `<span class="dim mono" style="margin-left:auto">${money(f.spent)} @ ${cents(f.price)}</span></li>`;
   }).join('');
 }
 
@@ -264,25 +446,58 @@ function renderChart(history) {
   $('fairline').setAttribute('points', pts('fair'));
 }
 
+function renderTicket() {
+  const p = team === 'ARG' ? price : 1 - price;
+  const shares = p > 0.01 ? amount / p : 0;
+  $('est-shares').textContent = `≈ ${shares.toFixed(1)}`;
+  $('est-pays').textContent = `${money(shares)} (+${money(Math.max(0, shares - amount)).slice(1)})`;
+  const buy = $('buy');
+  buy.disabled = settled;
+  buy.textContent = settled ? 'Market closed' : `Buy ${team === 'ARG' ? 'Yes' : 'No'} · $${amount}`;
+  buy.className = 'buy ' + (team === 'ARG' ? 'yes' : 'no');
+  document.querySelectorAll('.oc-btn, .stake').forEach((b) => { b.disabled = settled; });
+}
+
 function render(s) {
+  prevPrice = price;
   price = s.price;
   settled = s.match.status === 'settled';
 
   $('sc').textContent = `${s.match.argScore} – ${s.match.espScore}`;
   $('clock').textContent = `${Math.round(s.match.minute)}'`;
-  $('price').textContent = cents(s.price);
-  $('price').style.color = s.price >= 0.5 ? 'var(--arg)' : 'var(--esp)';
-  $('fair').textContent = `model ${cents(s.fair)}`;
+  $('price').innerHTML = `${Math.round(s.price * 100)}<sup>¢</sup>`;
+  $('price').style.color = s.price >= 0.5 ? 'var(--yes-dark)' : 'var(--text)';
+  $('fair').textContent = cents(s.fair);
   $('pc-arg').textContent = cents(s.price);
   $('pc-esp').textContent = cents(1 - s.price);
 
-  const st = $('status');
-  if (settled) {
-    st.textContent = s.match.outcome === 'YES' ? 'ARGENTINA WIN' : 'ARGENTINA DID NOT WIN';
-    st.className = 'status-settled';
+  const d = $('delta');
+  const diff = prevPrice != null ? Math.round((s.price - prevPrice) * 100) : 0;
+  if (diff !== 0) {
+    d.textContent = `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}¢`;
+    d.className = 'delta mono ' + (diff > 0 ? 'up' : 'down');
   } else {
-    st.textContent = s.match.status === 'live' ? 'LIVE' : 'warming up';
-    st.className = 'status-live';
+    d.textContent = '';
+  }
+
+  const yesPct = Math.round(s.price * 100);
+  $('prob-yes').style.width = `${yesPct}%`;
+  $('prob-yes').textContent = `Yes ${yesPct}%`;
+  $('prob-no').textContent = `No ${100 - yesPct}%`;
+
+  const pill = $('status-pill');
+  if (settled) {
+    $('status').textContent = s.match.outcome === 'YES' ? 'Resolved Yes' : 'Resolved No';
+    pill.className = 'pill resolved';
+    $('min-label').textContent = 'FULL TIME';
+  } else if (s.match.status === 'live') {
+    $('status').textContent = 'Live';
+    pill.className = 'pill live';
+    $('min-label').textContent = 'IN PLAY';
+  } else {
+    $('status').textContent = 'pre-match';
+    pill.className = 'pill';
+    $('min-label').textContent = 'PRE-MATCH';
   }
 
   renderChart(s.history);
@@ -290,11 +505,13 @@ function render(s) {
   $('tcount').textContent = `${s.traderCount} traders`;
   $('lb').innerHTML = s.leaders.map((t, i) => {
     const cls = t.pnl >= 0 ? 'up' : 'down';
-    return `<li><span><span class="dim mono">${i + 1}.</span> `
+    const you = me && t.id === me.id ? ' you' : '';
+    return `<li class="${you}"><span><span class="rank mono">${i + 1}</span>`
       + `<span class="k-${t.kind}">${t.name}</span></span>`
-      + `<span class="mono ${cls}">${t.pnl >= 0 ? '+' : '−'}${money(Math.abs(t.pnl)).slice(1)}</span></li>`;
+      + `<span class="mono ${cls}" style="font-weight:700">${t.pnl >= 0 ? '+' : '−'}${money(Math.abs(t.pnl)).slice(1)}</span></li>`;
   }).join('');
 
+  renderTicket();
   renderMe();
 }
 
@@ -304,9 +521,18 @@ function selectTeam(t) {
   team = t;
   $('btn-arg').setAttribute('aria-pressed', String(t === 'ARG'));
   $('btn-esp').setAttribute('aria-pressed', String(t === 'ESP'));
+  renderTicket();
 }
 $('btn-arg').onclick = () => selectTeam('ARG');
 $('btn-esp').onclick = () => selectTeam('ESP');
+
+for (const b of document.querySelectorAll('.stake')) {
+  b.onclick = () => {
+    amount = Number(b.dataset.amt);
+    document.querySelectorAll('.stake').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    renderTicket();
+  };
+}
 
 let toastTimer;
 function toast(msg) {
@@ -314,30 +540,27 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
 }
 
-for (const b of document.querySelectorAll('.stake')) {
-  b.onclick = async () => {
-    if (settled) return toast('Market closed');
-    const amount = Number(b.dataset.amt);
-    if (me && me.cash < amount) return toast('Not enough cash');
+$('buy').onclick = async () => {
+  if (settled) return toast('Market closed');
+  if (me && me.cash < amount) return toast('Not enough cash');
 
-    // Disable during flight so an excited tapper cannot double-fire a bet.
-    b.disabled = true;
-    try {
-      const r = await api('/bet', { traderId: id, team, amount });
-      if (r.me) { me = r.me; renderMe(); }
-      toast(r.filled
-        ? `${team} · ${r.shares.toFixed(0)} shares @ ${cents(r.price)}`
-        : 'Bet rejected');
-    } catch {
-      toast('Network hiccup — try again');
-    } finally {
-      b.disabled = false;
-    }
-  };
-}
+  const buy = $('buy');
+  buy.disabled = true; // an excited tapper cannot double-fire
+  try {
+    const r = await api('/bet', { traderId: id, team, amount });
+    if (r.me) { me = r.me; renderMe(); }
+    toast(r.filled
+      ? `Bought ${team === 'ARG' ? 'Yes' : 'No'} · ${r.shares.toFixed(0)} shares @ ${cents(r.price)}`
+      : 'Bet rejected');
+  } catch {
+    toast('Network hiccup — try again');
+  } finally {
+    buy.disabled = false;
+  }
+};
 
 // ------------------------------------------------------------------ transport
 
@@ -358,7 +581,7 @@ async function start() {
   const es = new EventSource(`/stream?traderId=${encodeURIComponent(id)}`);
   let wasSettled = false;
 
-  es.onopen = () => { $('conn').textContent = 'live'; };
+  es.onopen = () => { $('conn').textContent = 'connected'; };
   es.onerror = () => { $('conn').textContent = 'reconnecting…'; };
   es.onmessage = (ev) => {
     const s = JSON.parse(ev.data);
@@ -369,7 +592,22 @@ async function start() {
   es.addEventListener('me', (ev) => { me = JSON.parse(ev.data); renderMe(); });
 }
 
-start();
+// Name gate: first visit only; afterwards identity comes from localStorage.
+if (name) {
+  start();
+} else {
+  $('joinmodal').classList.add('show');
+  $('name-input').focus();
+  const submit = () => {
+    name = ($('name-input').value || '').trim().slice(0, 16)
+      || 'guest' + Math.floor(Math.random() * 900 + 100);
+    localStorage.setItem('mktName', name);
+    $('joinmodal').classList.remove('show');
+    start();
+  };
+  $('join-btn').onclick = submit;
+  $('name-input').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+}
 </script>
 </body>
 </html>

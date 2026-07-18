@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { TEAMS, teamById } from '../teams.js';
 import {
   POSITIONS, SKIN_TONES, HAIR_COLORS, HAIR_STYLES,
-  MATCH_LENGTHS, DIFFICULTY, CONTROLS_HTML,
+  MATCH_LENGTHS, DIFFICULTY, CONTROLS_KEYBOARD_HTML, CONTROLS_GAMEPAD_HTML,
 } from '../config.js';
 import { fileToImageData, samplePortrait } from '../avatar/sampler.js';
 import { buildPlayer } from '../game/rig.js';
@@ -89,7 +89,7 @@ export function showTitle(app) {
         <button class="btn" id="create">Create your star</button>
         <button class="btn ghost" id="quick">Quick match</button>
       </div>
-      <div class="panel" style="max-width:560px;text-align:center;font-size:14px;line-height:2">${CONTROLS_HTML}</div>
+      <div class="panel" style="max-width:560px;text-align:center;font-size:14px;line-height:2">${CONTROLS_KEYBOARD_HTML}<br/>${CONTROLS_GAMEPAD_HTML}</div>
     </div>`;
   app.ui.querySelector('#create').onclick = () => { app.audio.ensure(); app.audio.ui(); showUpload(app); };
   app.ui.querySelector('#quick').onclick = () => { app.audio.ensure(); app.audio.ui(); showTeamSelect(app, 'home'); };
@@ -301,7 +301,7 @@ export function showPause(app, { onResume, onRestart, onQuit }) {
         <button class="btn ghost" id="mute">${app.audio.muted ? 'Sound: off' : 'Sound: on'} (M)</button>
         <button class="btn ghost" id="quit">Quit to title</button>
       </div>
-      <div class="sub" style="margin-top:4px">${CONTROLS_HTML}</div>
+      <div class="sub" style="margin-top:4px">${CONTROLS_KEYBOARD_HTML}<br/>${CONTROLS_GAMEPAD_HTML}</div>
     </div>`;
   app.ui.querySelector('#resume').onclick = () => { app.audio.ui(); onResume(); };
   app.ui.querySelector('#restart').onclick = () => { app.audio.ui(); onRestart(); };
