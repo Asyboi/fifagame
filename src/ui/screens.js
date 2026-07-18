@@ -154,13 +154,28 @@ export function showUpload(app) {
   };
 }
 
-async function requestAiAvatar(file) {
-  const image = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
+// Downscale before upload: Cerebras processes at <=~1056px anyway, and
+// Vercel caps request bodies at ~4.5 MB - full-res phone photos would 413.
+function fileToDataUri(file, maxSize = 1024) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(8, Math.round(img.width * scale));
+      c.height = Math.max(8, Math.round(img.height * scale));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
   });
+}
+
+async function requestAiAvatar(file) {
+  const image = await fileToDataUri(file);
   const resp = await fetch('/generate-avatar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
