@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>Argentina vs Spain — Live Market</title>
+<style>
+  /* One page, two audiences. Phones get the stacked betting view; the projector
+     gets the same markup in a wide grid. No separate dashboard to keep in sync. */
+  :root {
+    --bg: #0b1020;
+    --panel: #141b33;
+    --panel-2: #1b2444;
+    --line: #2a3560;
+    --text: #eef2ff;
+    --dim: #8b97c4;
+    --arg: #6cace4;
+    --esp: #e04b5f;
+    --win: #35d39a;
+    --lose: #ff6b7f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 14px; display: grid; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .dim { color: var(--dim); }
+  .tiny { font-size: 12px; }
+  .mono { font-variant-numeric: tabular-nums; }
+
+  /* scoreboard */
+  .score { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .clock { font-size: 15px; color: var(--dim); }
+  .status-live { color: var(--win); }
+  .status-settled { color: var(--dim); }
+
+  /* the price, the single most important number on screen */
+  .price-big { font-size: 62px; font-weight: 800; line-height: 1; letter-spacing: -3px; }
+  .price-sub { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .fair { font-size: 13px; color: var(--dim); }
+
+  #chart { width: 100%; height: 110px; display: block; }
+
+  /* betting */
+  .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .team-btn {
+    border: 2px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 12px; padding: 12px 8px; font-size: 15px; font-weight: 700;
+    cursor: pointer; text-align: center; transition: border-color .12s, background .12s;
+  }
+  .team-btn[aria-pressed="true"] { background: #223059; }
+  .team-btn.arg[aria-pressed="true"] { border-color: var(--arg); }
+  .team-btn.esp[aria-pressed="true"] { border-color: var(--esp); }
+  .team-btn .pc { display: block; font-size: 20px; margin-top: 3px; }
+  .team-btn.arg .pc { color: var(--arg); }
+  .team-btn.esp .pc { color: var(--esp); }
+
+  .stakes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .stake {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 10px; padding: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
+  }
+  .stake:disabled { opacity: .35; cursor: not-allowed; }
+  .stake:active { background: #2c3a6b; }
+
+  .wallet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .wallet div span { display: block; font-size: 19px; font-weight: 700; margin-top: 2px; }
+  .up { color: var(--win); } .down { color: var(--lose); }
+
+  /* feed + leaderboard */
+  ul { list-style: none; margin: 0; padding: 0; }
+  .feed li { padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .feed li:last-child { border-bottom: 0; }
+  .feed .who { font-weight: 700; }
+  .k-bot { color: var(--dim); } .k-human { color: var(--arg); } .k-agent { color: #d7a3ff; }
+  .goal-line { color: var(--win); font-weight: 700; }
+  .lb li { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: #223059; border: 1px solid var(--line); padding: 10px 16px;
+    border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none;
+    transition: opacity .2s; z-index: 10;
+  }
+  .toast.show { opacity: 1; }
+
+  .join-card { display: none; }
+  .join-url { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+
+  /* Projector: same DOM, wider grid, bigger type. */
+  @media (min-width: 900px) {
+    .join-card { display: block; }
+    .wrap { max-width: 1400px; grid-template-columns: 1.35fr 1fr; align-items: start; }
+    .span-all { grid-column: 1 / -1; }
+    .price-big { font-size: 108px; }
+    .score { font-size: 52px; }
+    #chart { height: 210px; }
+    .feed li, .lb li { font-size: 16px; }
+    body { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card span-all">
+    <div class="row">
+      <div>
+        <div class="score mono"><span id="sc">0 – 0</span></div>
+        <div class="clock">Argentina vs Spain · <span id="clock">0'</span> · <span id="status" class="status-live">warming up</span></div>
+      </div>
+      <div style="text-align:right">
+        <div class="price-big mono" id="price">50¢</div>
+        <div class="price-sub">Argentina to win · <span class="fair" id="fair"></span></div>
+      </div>
+    </div>
+    <svg id="chart" viewBox="0 0 300 100" preserveAspectRatio="none" aria-label="price history">
+      <line x1="0" y1="50" x2="300" y2="50" stroke="#2a3560" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      <polyline id="fairline" fill="none" stroke="#4a5891" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>
+      <polyline id="pxline" fill="none" stroke="#6cace4" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <div class="row tiny dim" style="margin-top:6px">
+      <span>solid = market price · dashed = model fair value</span>
+      <span id="conn">connecting…</span>
+    </div>
+  </div>
+
+  <!-- Projector only: the room needs to see where to go. Hidden on phones,
+       which are already here. -->
+  <div class="card join-card span-all" id="joincard">
+    <div class="row">
+      <div>
+        <div class="tiny dim">SCAN OR VISIT · $100 PAPER MONEY</div>
+        <div class="join-url mono" id="joinurl"></div>
+      </div>
+      <div id="qrslot"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <strong>Place a bet</strong>
+        <span class="tiny dim">a draw settles as Spain/No</span>
+      </div>
+      <div class="teams">
+        <button class="team-btn arg" id="btn-arg" aria-pressed="true">ARGENTINA<span class="pc mono" id="pc-arg">50¢</span></button>
+        <button class="team-btn esp" id="btn-esp" aria-pressed="false">SPAIN<span class="pc mono" id="pc-esp">50¢</span></button>
+      </div>
+      <div class="stakes">
+        <button class="stake" data-amt="5">$5</button>
+        <button class="stake" data-amt="10">$10</button>
+        <button class="stake" data-amt="25">$25</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="wallet mono">
+        <div class="dim tiny">CASH<span id="cash">$100.00</span></div>
+        <div class="dim tiny">POSITION<span id="pos">—</span></div>
+        <div class="dim tiny">P&amp;L<span id="pnl">$0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <strong>Market feed</strong>
+      <ul class="feed" id="feed"></ul>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="row"><strong>Leaderboard</strong><span class="tiny dim" id="tcount"></span></div>
+      <ul class="lb" id="lb"></ul>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const cents = (p) => `${Math.round(p * 100)}¢`;
+const money = (n) => `$${n.toFixed(2)}`;
+
+// Identity lives in localStorage so a phone that locks, sleeps, or reloads keeps
+// its balance. No accounts, no login -- scan the QR and you are in.
+let id = localStorage.getItem('mktId');
+let name = localStorage.getItem('mktName');
+if (!id) {
+  id = 'h:' + Math.random().toString(36).slice(2, 9);
+  localStorage.setItem('mktId', id);
+}
+if (!name) {
+  name = (prompt('Name for the leaderboard?') || '').trim().slice(0, 16)
+    || 'guest' + Math.floor(Math.random() * 900 + 100);
+  localStorage.setItem('mktName', name);
+}
+
+// Shown large on the projector so the room can type it in without a QR code,
+// and so a wrong URL is obvious to us before anyone tries to scan.
+$('joinurl').textContent = location.host + location.pathname.replace(/\/$/, '');
+
+let me = null;
+let price = 0.5;
+let team = 'ARG';
+let settled = false;
+
+const api = (path, body) => fetch(path, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+}).then((r) => r.json());
+
+// ------------------------------------------------------------------ rendering
+
+function renderMe() {
+  if (!me) return;
+  $('cash').textContent = money(me.cash);
+  const net = me.yes - me.no;
+  $('pos').textContent = Math.abs(net) < 0.5 ? '—'
+    : `${net > 0 ? 'ARG' : 'ESP'} ${Math.abs(net).toFixed(0)}`;
+
+  const equity = settled ? me.cash : me.cash + me.yes * price + me.no * (1 - price);
+  const pnl = equity - me.startingCash;
+  const el = $('pnl');
+  el.textContent = (pnl >= 0 ? '+' : '−') + money(Math.abs(pnl)).slice(1);
+  el.className = pnl >= 0 ? 'up' : 'down';
+}
+
+function renderFeed(feed) {
+  $('feed').innerHTML = feed.map((f) => {
+    if (f.type === 'goal') {
+      return `<li class="goal-line">⚽ GOAL — ${f.team === 'ARG' ? 'Argentina' : 'Spain'} ${f.minute}'</li>`;
+    }
+    if (f.type === 'final') {
+      return `<li class="goal-line">FULL TIME ${f.argScore}–${f.espScore}</li>`;
+    }
+    if (f.type === 'system') return `<li class="dim">${f.text}</li>`;
+    if (f.type === 'agent') {
+      return `<li><span class="who k-agent">${f.trader}</span> <span class="dim">${f.text}</span></li>`;
+    }
+    return `<li><span class="who k-${f.kind}">${f.trader}</span> `
+      + `<span class="${f.team === 'ARG' ? 'k-human' : ''}">${f.team}</span> `
+      + `<span class="dim mono">${money(f.spent)} @ ${cents(f.price)}</span></li>`;
+  }).join('');
+}
+
+function renderChart(history) {
+  if (history.length < 2) return;
+  const step = 300 / (history.length - 1);
+  const pts = (key) => history
+    .map((h, i) => `${(i * step).toFixed(1)},${(100 - h[key] * 100).toFixed(1)}`)
+    .join(' ');
+  $('pxline').setAttribute('points', pts('price'));
+  $('fairline').setAttribute('points', pts('fair'));
+}
+
+function render(s) {
+  price = s.price;
+  settled = s.match.status === 'settled';
+
+  $('sc').textContent = `${s.match.argScore} – ${s.match.espScore}`;
+  $('clock').textContent = `${Math.round(s.match.minute)}'`;
+  $('price').textContent = cents(s.price);
+  $('price').style.color = s.price >= 0.5 ? 'var(--arg)' : 'var(--esp)';
+  $('fair').textContent = `model ${cents(s.fair)}`;
+  $('pc-arg').textContent = cents(s.price);
+  $('pc-esp').textContent = cents(1 - s.price);
+
+  const st = $('status');
+  if (settled) {
+    st.textContent = s.match.outcome === 'YES' ? 'ARGENTINA WIN' : 'ARGENTINA DID NOT WIN';
+    st.className = 'status-settled';
+  } else {
+    st.textContent = s.match.status === 'live' ? 'LIVE' : 'warming up';
+    st.className = 'status-live';
+  }
+
+  renderChart(s.history);
+  renderFeed(s.feed);
+  $('tcount').textContent = `${s.traderCount} traders`;
+  $('lb').innerHTML = s.leaders.map((t, i) => {
+    const cls = t.pnl >= 0 ? 'up' : 'down';
+    return `<li><span><span class="dim mono">${i + 1}.</span> `
+      + `<span class="k-${t.kind}">${t.name}</span></span>`
+      + `<span class="mono ${cls}">${t.pnl >= 0 ? '+' : '−'}${money(Math.abs(t.pnl)).slice(1)}</span></li>`;
+  }).join('');
+
+  renderMe();
+}
+
+// ------------------------------------------------------------------ betting
+
+function selectTeam(t) {
+  team = t;
+  $('btn-arg').setAttribute('aria-pressed', String(t === 'ARG'));
+  $('btn-esp').setAttribute('aria-pressed', String(t === 'ESP'));
+}
+$('btn-arg').onclick = () => selectTeam('ARG');
+$('btn-esp').onclick = () => selectTeam('ESP');
+
+let toastTimer;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+for (const b of document.querySelectorAll('.stake')) {
+  b.onclick = async () => {
+    if (settled) return toast('Market closed');
+    const amount = Number(b.dataset.amt);
+    if (me && me.cash < amount) return toast('Not enough cash');
+
+    // Disable during flight so an excited tapper cannot double-fire a bet.
+    b.disabled = true;
+    try {
+      const r = await api('/bet', { traderId: id, team, amount });
+      if (r.me) { me = r.me; renderMe(); }
+      toast(r.filled
+        ? `${team} · ${r.shares.toFixed(0)} shares @ ${cents(r.price)}`
+        : 'Bet rejected');
+    } catch {
+      toast('Network hiccup — try again');
+    } finally {
+      b.disabled = false;
+    }
+  };
+}
+
+// ------------------------------------------------------------------ transport
+
+async function refreshMe() {
+  try {
+    const r = await fetch(`/me?traderId=${encodeURIComponent(id)}`).then((x) => x.json());
+    if (r.me) { me = r.me; renderMe(); }
+  } catch { /* the stream will resync us shortly */ }
+}
+
+async function start() {
+  const r = await api('/join', { id, name });
+  me = r.trader;
+  renderMe();
+
+  // EventSource reconnects on its own when a phone sleeps or the signal drops,
+  // which is the whole reason this is SSE and not a WebSocket.
+  const es = new EventSource(`/stream?traderId=${encodeURIComponent(id)}`);
+  let wasSettled = false;
+
+  es.onopen = () => { $('conn').textContent = 'live'; };
+  es.onerror = () => { $('conn').textContent = 'reconnecting…'; };
+  es.onmessage = (ev) => {
+    const s = JSON.parse(ev.data);
+    render(s);
+    // Settlement rewrites cash server-side, so pull our own row once at the whistle.
+    if (settled && !wasSettled) { wasSettled = true; refreshMe(); }
+  };
+  es.addEventListener('me', (ev) => { me = JSON.parse(ev.data); renderMe(); });
+}
+
+start();
+</script>
+</body>
+</html>
