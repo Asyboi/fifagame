@@ -9,7 +9,7 @@ import {
   MATCH_LENGTHS, DIFFICULTY, CONTROLS_KEYBOARD_HTML,
 } from '../config.js';
 import { fileToImageData, samplePortrait } from '../avatar/sampler.js';
-import { buildPlayer } from '../game/rig.js';
+import { buildCustomOrStandard } from '../avatar/generated.js';
 
 const WSC_KIT = { pattern: 'solid', primary: '#12324a', secondary: '#12324a', trim: '#22d3ee', shorts: '#0b1226', number: '#22d3ee' };
 
@@ -61,9 +61,10 @@ function createAvatarPreview(container) {
   return {
     update(profile) {
       if (rig) scene.remove(rig.group);
-      rig = buildPlayer({
+      rig = buildCustomOrStandard(THREE, {
         kit: WSC_KIT, skin: profile.skin, hair: profile.hair,
         hairStyle: profile.hairStyle, number: profile.number, name: profile.name,
+        avatarCode: profile.avatarCode,
       });
       scene.add(rig.group);
     },
@@ -106,7 +107,8 @@ export function showUpload(app) {
         <p>Drop a photo here or <u>browse</u> — we'll detect your skin tone &amp; hair color</p>
         <input type="file" id="file" accept="image/*" hidden />
       </div>
-      <div class="privacy">🔒 Your photo never leaves this browser. Everything runs locally.</div>
+      <div class="privacy"> Colours are detected locally. Your photo is also sent (once, not stored)
+        to our AI avatar service to sculpt a custom 3D look — skip below to stay fully local.</div>
       <div class="btn-row">
         <button class="btn ghost" id="back">Back</button>
         <button class="btn ghost" id="skip">Skip — pick a look</button>
@@ -130,6 +132,11 @@ export function showUpload(app) {
     dz.innerHTML = `<img class="preview" src="${url}" alt="your photo" /><p>Looking good?</p>`;
     const img = await fileToImageData(f);
     sampled = img ? samplePortrait(img) : null;
+    // fire-and-forget: the AI avatar resolves while the user customizes
+    app._aiAvatar = requestAiAvatar(f).catch((err) => {
+      console.warn('AI avatar unavailable:', err);
+      return null;
+    });
     use.disabled = false;
     app.audio.ui();
   }
@@ -147,8 +154,50 @@ export function showUpload(app) {
   };
 }
 
+async function requestAiAvatar(file) {
+  const image = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const resp = await fetch('/generate-avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image }),
+  });
+  const result = await resp.json();
+  if (!resp.ok) throw new Error(result.error || resp.statusText);
+  return result;
+}
+
 export function showCustomize(app) {
   const p = app.profile;
+
+  // AI avatar lands asynchronously: apply it to the profile and
+  // re-render this screen if the player is still looking at it.
+  if (app._aiAvatar) {
+    const pending = app._aiAvatar;
+    app._aiAvatar = null;
+    app._aiNote = ' AI is sculpting your custom avatar…';
+    pending.then((result) => {
+      if (!result) {
+        app._aiNote = 'AI avatar unavailable — using local colour detection.';
+      } else {
+        const { spec, code } = result;
+        p.skin = spec.skin_tone;
+        p.hair = spec.hair_color;
+        p.hairStyle = spec.hair_style;
+        p.avatarCode = code;
+        if (spec.team_id) app.homeTeamId = spec.team_id;
+        app._aiNote = code
+          ? ` AI built your custom avatar — “${spec.description}”`
+          : ` AI matched your colours — “${spec.description}”`;
+      }
+      if (app.ui.querySelector('#avatar-preview')) showCustomize(app);
+    });
+  }
+
   const detected = app.sampled
     ? (app.sampled.skinOk || app.sampled.hairOk
       ? `✨ Detected from your photo: ${[app.sampled.skinOk && 'skin tone', app.sampled.hairOk && 'hair color'].filter(Boolean).join(' + ')}`
@@ -173,6 +222,7 @@ export function showCustomize(app) {
           <label>Skin tone</label>
           <div class="swatches" id="skin">${SKIN_TONES.map((c) => `<div class="swatch ${c.toLowerCase() === String(p.skin).toLowerCase() ? 'on' : ''}" data-v="${c}" style="background:${c}"></div>`).join('')}</div>
           ${detected ? `<div></div><div class="detected-note">${detected}</div>` : ''}
+          ${app._aiNote ? `<div></div><div class="detected-note">${app._aiNote}</div>` : ''}
         </div>
       </div>
       <div class="btn-row">
@@ -181,9 +231,11 @@ export function showCustomize(app) {
       </div>
     </div>`;
 
+  app._disposePreview?.(); // dispose any previous preview (screen re-renders)
   const preview = createAvatarPreview(app.ui.querySelector('#avatar-preview'));
   preview.update(p);
-  const cleanup = () => preview.dispose();
+  const cleanup = () => { preview.dispose(); app._disposePreview = null; };
+  app._disposePreview = cleanup;
 
   app.ui.querySelector('#name').oninput = (e) => { p.name = e.target.value || 'YOU'; preview.update(p); };
   app.ui.querySelector('#number').oninput = (e) => {

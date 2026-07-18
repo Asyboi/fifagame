@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/generate-avatar", "destination": "/api/generate-avatar" }
+  ],
+  "functions": {
+    "api/generate-avatar.js": { "maxDuration": 60 }
+  }
+}

@@ -47,7 +47,7 @@ const app = {
   audio,
   profile: {
     name: 'YOU', number: 9, position: 'FWD',
-    skin: '#d9a06b', hair: '#2e2118', hairStyle: 'short',
+    skin: '#d9a06b', hair: '#2e2118', hairStyle: 'short', avatarCode: null,
   },
   sampled: null,
   homeTeamId: 'arg',

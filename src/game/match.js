@@ -10,6 +10,7 @@ import { pickPassTarget, pickSwitchTarget, formationAnchor, inShootingRange, sho
 import { createStorm, updateStorm, resolveImpact } from './meteors.js';
 import { createMeteorFx } from './meteorfx.js';
 import { buildPlayer, animateRig, disposeRig } from './rig.js';
+import { buildCustomOrStandard } from '../avatar/generated.js';
 import { buildStadium, buildBallMesh, spinBall } from './stadium.js';
 import { createMarketFeed } from '../market.js';
 import { namePool, defaultNumber } from './names.js';
@@ -92,15 +93,19 @@ export function createMatch({ config, hud, audio, input, marketUrl, onExit, onPa
         thinkT: Math.random() * 0.3, target: { x: slot.x * mirror, z: slot.z * mirror },
         wantSprint: false, badTouchT: 0,
       };
-      p.rig = buildPlayer(isUserSlot
-        ? { kit: team.kit, skin: profile.skin, hair: profile.hair, hairStyle: profile.hairStyle, number: p.number, name: p.name, gk: false }
-        : {
+      p.rig = isUserSlot
+        ? buildCustomOrStandard(THREE, {
+          kit: team.kit, skin: profile.skin, hair: profile.hair, hairStyle: profile.hairStyle,
+          number: p.number, name: p.name, gk: false, avatarCode: profile.avatarCode,
+        })
+        : buildPlayer({
           kit: team.kit,
           skin: SKIN_TONES[(p.id * 2 + 1) % SKIN_TONES.length],
           hair: HAIR_COLORS[(p.id * 3) % HAIR_COLORS.length],
           hairStyle: HAIR_STYLES[p.id % (HAIR_STYLES.length - 1)], // keep 'bald' rare
           number: p.number, name: null, gk: slot.role === 'GK',
         });
+
       p.rig.group.position.set(p.pos.x, 0, p.pos.z);
       scene.add(p.rig.group);
       players.push(p);
