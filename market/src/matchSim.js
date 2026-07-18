@@ -6,10 +6,11 @@
 
 const MATCH_MINUTES = 90;
 
-// Per-minute scoring chance per side. Tuned upward from real football -- a
-// genuine 90 minutes often has one goal or none, and a scoreless demo is a
-// wasted demo. We want two to four goals in three minutes.
-const GOAL_RATE = 0.022;
+// Per-minute scoring chance. Tuned well above real football -- a genuine 90
+// minutes often has one goal or none, and the goal is the only moment where the
+// price moves hard enough for a room to gasp. A rehearsal at 0.022 produced a
+// single goal in the whole match and the middle sixty minutes were flat.
+const GOAL_RATE = 0.03;
 const SHOT_RATE = 0.09;
 
 /**
