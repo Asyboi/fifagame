@@ -27,8 +27,7 @@ export function spawnBots(market, { count = BOT_COUNT, random = Math.random } = 
   const bots = [];
   for (let i = 0; i < count; i++) {
     const name = `${FIRST_NAMES[i % FIRST_NAMES.length]}${i}`;
-    join(market, { id: `bot:${i}`, name, kind: 'bot' });
-    market.ledger.traders.get(`bot:${i}`).cash = BOT_CASH;
+    join(market, { id: `bot:${i}`, name, kind: 'bot', cash: BOT_CASH });
 
     bots.push({
       id: `bot:${i}`,

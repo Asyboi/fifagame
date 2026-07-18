@@ -42,10 +42,10 @@ export function createMatchMarket({ b = 120 } = {}) {
   };
 }
 
-export function join(market, { id, name, kind = 'human' }) {
+export function join(market, { id, name, kind = 'human', cash }) {
   const existing = getTrader(market.ledger, id);
   if (existing) return existing;
-  return addTrader(market.ledger, { id, name, kind });
+  return addTrader(market.ledger, { id, name, kind, ...(cash !== undefined && { cash }) });
 }
 
 // Side is expressed as a team from the UI's point of view; the book only knows
@@ -199,7 +199,7 @@ export function traderView(market, traderId) {
     no: trader.no,
     trades: trader.trades,
     equity: trader.cash + trader.yes * price + trader.no * (1 - price),
-    startingCash: STARTING_CASH,
+    startingCash: trader.startingCash,
   };
 }
 
