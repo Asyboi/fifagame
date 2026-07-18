@@ -6,7 +6,8 @@
   "description": "Prediction market for the Argentina vs Spain match",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "deploy": "bash scripts/sync-branch.sh"
   },
   "engines": {
     "node": ">=20"
