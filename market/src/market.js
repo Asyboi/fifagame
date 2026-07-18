@@ -180,8 +180,10 @@ export function snapshot(market) {
     fair: currentFair(market),
     history: market.history.slice(-120),
     feed: market.feed.slice(0, 12),
-    leaders: leaderboard(market.ledger, price, { limit: 8 }),
-    humans: leaderboard(market.ledger, price, { kind: 'human', limit: 5 }),
+    // Humans and AI agents share one board so the audience can see itself
+    // beating (or losing to) the swarm. Bots are liquidity, not contestants.
+    leaders: leaderboard(market.ledger, price, { kinds: ['human', 'agent'], limit: 8 }),
+    humans: leaderboard(market.ledger, price, { kinds: ['human'], limit: 5 }),
     traderCount: market.ledger.traders.size,
   };
 }

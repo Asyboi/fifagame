@@ -63,9 +63,14 @@ export function settle(ledger, outcome) {
 
 // Leaderboard, richest first. `limit` keeps the projector readable -- top 10 is
 // about what fits before the text gets too small for a room to read.
-export function leaderboard(ledger, priceYes, { kind = null, limit = 10 } = {}) {
+//
+// `kinds` filters to particular trader types. The projector board deliberately
+// excludes bots: they are seeded with more capital and there are forty of them,
+// so they swept the entire top eight and hid both the audience and the AI
+// agents -- the only two groups anyone in the room cares about.
+export function leaderboard(ledger, priceYes, { kinds = null, limit = 10 } = {}) {
   return [...ledger.traders.values()]
-    .filter((t) => (kind ? t.kind === kind : true))
+    .filter((t) => (kinds ? kinds.includes(t.kind) : true))
     .map((t) => ({
       id: t.id,
       name: t.name,

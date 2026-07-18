@@ -219,7 +219,14 @@ function buildPrompt(market, trader) {
     .join('; ') || 'nothing yet';
 
   return [
-    `Argentina vs Spain, ${m.minute | 0}' — score ${m.argScore}-${m.espScore}.`,
+    // Teams are named on both sides of the score. Written as "score 1-0" an
+    // agent occasionally read the lead backwards and narrated a comeback for
+    // the team that was winning.
+    `Argentina vs Spain, ${m.minute | 0} minutes played.`,
+    `SCORE: Argentina ${m.argScore} - ${m.espScore} Spain.`
+      + ` ${m.argScore === m.espScore ? 'Level.'
+        : `${m.argScore > m.espScore ? 'Argentina' : 'Spain'} lead by `
+          + `${Math.abs(m.argScore - m.espScore)}.`}`,
     `Shots on target: Argentina ${m.argShots}, Spain ${m.espShots}.`,
     `Possession: Argentina ${Math.round(m.argPossession * 100)}%.`,
     '',
