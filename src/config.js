@@ -96,5 +96,3 @@ export const CONTROLS_KEYBOARD_HTML = `
   <span class="kbd">K</span> <em>(hold)</em> Shoot / Slide &nbsp;
   <span class="kbd">L</span> Switch player`;
 
-export const CONTROLS_GAMEPAD_HTML = `
-  <span class="pad">Gamepad:</span> Left stick move &middot; <span class="kbd">A</span> Pass &middot; <span class="kbd">X</span> Shoot &middot; <span class="kbd">RT</span> Sprint &middot; <span class="kbd">LB</span> Switch`;
