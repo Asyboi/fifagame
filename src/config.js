@@ -42,17 +42,17 @@ export const DIFFICULTY = {
   amateur: {
     label: 'Amateur',
     aiSpeed: 0.86, aiSprint: 0.9, reaction: 0.42, passError: 0.28,
-    tackleWin: 0.45, pressRadius: 9, gkSave: 0.82, gkReact: 0.5, shootErr: 0.3,
+    tackleWin: 0.45, pressRadius: 9, gkSave: 0.9, gkReact: 0.42, shootErr: 0.3,
   },
   pro: {
     label: 'Pro',
     aiSpeed: 0.97, aiSprint: 1.0, reaction: 0.26, passError: 0.14,
-    tackleWin: 0.6, pressRadius: 12, gkSave: 1.05, gkReact: 0.32, shootErr: 0.18,
+    tackleWin: 0.6, pressRadius: 12, gkSave: 1.2, gkReact: 0.26, shootErr: 0.18,
   },
   legend: {
     label: 'Legend',
     aiSpeed: 1.07, aiSprint: 1.06, reaction: 0.14, passError: 0.06,
-    tackleWin: 0.74, pressRadius: 15, gkSave: 1.3, gkReact: 0.2, shootErr: 0.1,
+    tackleWin: 0.74, pressRadius: 15, gkSave: 1.45, gkReact: 0.17, shootErr: 0.1,
   },
 };
 
