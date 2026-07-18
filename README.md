@@ -16,7 +16,7 @@ They are deliberately decoupled: the game POSTs match events over HTTP,
 fire-and-forget, and the market does everything else. No shared build, no
 shared dependencies, no shared runtime. Kill either one and the other keeps
 running.
-
+hi
 ```
   game (Vite, browser)                market (Node, port 8787)
   ┌───────────────────┐   POST /event  ┌──────────────────────────┐
